@@ -1,6 +1,6 @@
 ## 📋 Descrição
 
-<!-- Explique o que foi feito neste PR e por quê -->
+<!-- Explique o que foi feito neste PR -->
 
 ## 🔨 Tipo de mudança
 
