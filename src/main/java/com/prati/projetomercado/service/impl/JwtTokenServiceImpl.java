@@ -5,7 +5,8 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.prati.projetomercado.config.UserDetailsImpl;
-import com.prati.projetomercado.repository.AuthUser;
+import com.prati.projetomercado.entity.AuthUser;
+import com.prati.projetomercado.entity.RefreshToken;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -19,14 +20,14 @@ public class JwtTokenServiceImpl {
 
     public static final String ISSUER = "prati-projeto-mercado";
 
-    public String generateToken(UserDetailsImpl userDetails) {
+    public String generateToken(AuthUser authUser, Instant expirationDate) {
         try {
             var algorithm = Algorithm.HMAC256(SECRET_KEY);
             return JWT.create()
                     .withIssuer(ISSUER)
                     .withIssuedAt(creationDate())
-                    .withExpiresAt(expirationDate())
-                    .withSubject(userDetails.getUsername())
+                    .withExpiresAt(expirationDate)
+                    .withSubject(authUser.getEmail())
                     .sign(algorithm);
         } catch (JWTCreationException exception) {
             throw new JWTCreationException("Token creation error", exception);
@@ -47,7 +48,16 @@ public class JwtTokenServiceImpl {
         return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toInstant();
     }
 
-    public Instant expirationDate() {
-        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusHours(4).toInstant();
+    public Instant expirationAcessTokenDate() {
+        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusHours(1).toInstant();
     }
+
+    public RefreshToken generateNewRefreshToken(AuthUser user){
+        var refreshToken = new RefreshToken();
+        refreshToken.setAuthUser(user);
+        refreshToken.setExpiresAt(Instant.now().plusSeconds(3600 * 12));
+        return refreshToken;
+    }
+
+
 }
