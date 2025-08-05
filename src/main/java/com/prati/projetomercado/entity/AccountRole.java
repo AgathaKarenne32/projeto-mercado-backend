@@ -1,25 +1,23 @@
-package com.prati.projetomercado.repository;
+package com.prati.projetomercado.entity;
 
+import com.prati.projetomercado.model.AccountRoleEnum;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Table(name = "authUsers")
-@Entity(name = "authUser")
+@Entity
+@Table(name = "account_roles")
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-@Builder
-public class AuthUser {
-    
+public class AccountRole {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @Column(unique = true)
-    private String email;
-    
-    private String password;
+
+    @Enumerated(EnumType.STRING)
+    private AccountRoleEnum roleName;
 }
