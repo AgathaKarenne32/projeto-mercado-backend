@@ -1,5 +1,6 @@
 package com.prati.projetomercado.filter;
 
+import com.prati.projetomercado.advice.ExceptionAdvice;
 import com.prati.projetomercado.config.SecurityConfiguration;
 import com.prati.projetomercado.config.UserDetailsImpl;
 import com.prati.projetomercado.repository.AccessTokenRepository;
@@ -27,11 +28,13 @@ public class UserAutenticationFilter extends OncePerRequestFilter {
 
     private AuthUserRepository authUserRepository;
     private AccessTokenRepository accessTokenRepository;
+    private ExceptionAdvice advice;
 
-    public UserAutenticationFilter(JwtTokenServiceImpl jwtTokenService, AuthUserRepository authUserRepository, AccessTokenRepository accessTokenRepository) {
-        this.jwtTokenService = jwtTokenService;
-        this.authUserRepository = authUserRepository;
+    public UserAutenticationFilter(ExceptionAdvice advice, AccessTokenRepository accessTokenRepository, AuthUserRepository authUserRepository, JwtTokenServiceImpl jwtTokenService) {
+        this.advice = advice;
         this.accessTokenRepository = accessTokenRepository;
+        this.authUserRepository = authUserRepository;
+        this.jwtTokenService = jwtTokenService;
     }
 
     @Override
@@ -45,6 +48,8 @@ public class UserAutenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        try {
+
         String token = recoveryToken(request);
 
         if (token == null) {
@@ -65,6 +70,10 @@ public class UserAutenticationFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         filterChain.doFilter(request, response);
+        } catch (Exception e) {
+            logger.error("spring security filter exception", e);
+            advice.handleException(e);
+        }
     }
 
     private String recoveryToken(HttpServletRequest request) {

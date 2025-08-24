@@ -56,6 +56,8 @@ public class SecurityConfiguration {
     public HttpCookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository() {
         return new HttpCookieOAuth2AuthorizationRequestRepository();
     }
+
+
     @Bean
     @Order(10)
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
