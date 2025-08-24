@@ -52,7 +52,7 @@ public class UserAutenticationFilter extends OncePerRequestFilter {
         }
 
         var subject = jwtTokenService.getSubjectFromToken(token);
-        var user = authUserRepository.findByEmail(subject).get();
+        var user = authUserRepository.findByEmail(subject).orElseThrow();
         var accessTokenFromRepo = accessTokenRepository.findByAuthUser(user);
 
         if (accessTokenFromRepo.getExpiredDate().isBefore(Instant.now()))

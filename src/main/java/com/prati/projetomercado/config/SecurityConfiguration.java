@@ -1,6 +1,9 @@
 package com.prati.projetomercado.config;
 
 import com.prati.projetomercado.filter.UserAutenticationFilter;
+import com.prati.projetomercado.security.oauth2.CustomOAuth2UserService;
+import com.prati.projetomercado.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
+import com.prati.projetomercado.security.oauth2.handlers.OAuth2AuthSuccessHandler;
 import com.prati.projetomercado.service.impl.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -23,7 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
-    
+
     public static final String[] PUBLIC_ENDPOINTS = {
             "/auth/register",
             "/auth/register/",
@@ -33,9 +36,10 @@ public class SecurityConfiguration {
             "/auth/refresh-token/",
             "/h2-console/**",
             "/h2-console/",
-            "/h2-console"
+            "/h2-console",
+            "/oauth2/**"
     };
-    
+
     public static final String[] AUTH_REQUIRED_ENDPOINTS = {
             "/auth/test-autenticated",
     };
@@ -43,18 +47,42 @@ public class SecurityConfiguration {
     @Autowired
     private UserAutenticationFilter userAutenticationFilter;
 
+    @Autowired
+    private CustomOAuth2UserService customOAuth2UserService;
+
+    @Autowired private OAuth2AuthSuccessHandler oAuth2AuthSuccessHandler;
+
+    @Bean
+    public HttpCookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository() {
+        return new HttpCookieOAuth2AuthorizationRequestRepository();
+    }
     @Bean
     @Order(10)
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity.csrf(AbstractHttpConfigurer::disable)
                 .headers(HeadersConfigurer::disable)
                 .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .authorizeHttpRequests(
                         authorize -> authorize
                                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                                .requestMatchers(AUTH_REQUIRED_ENDPOINTS).authenticated()
-                                .anyRequest().denyAll()
+                                .anyRequest().permitAll()
                 ).addFilterBefore(userAutenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+                .oauth2Login(
+                        configurer ->
+                                configurer.authorizationEndpoint(
+                                        endpoint -> endpoint
+                                                .baseUri("/oauth2/authorize")
+                                                .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository())
+
+                                )
+                                        .redirectionEndpoint(endpoint -> endpoint
+                                                .baseUri("/oauth2/callback/*"))
+                                        .userInfoEndpoint(endpoint -> endpoint
+                                                .userService(customOAuth2UserService))
+                                        .successHandler(oAuth2AuthSuccessHandler)
+                )
                 .build();
 
     }
@@ -68,12 +96,11 @@ public class SecurityConfiguration {
     }
 
 
-
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-    
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -88,5 +115,5 @@ public class SecurityConfiguration {
         provider.setPasswordEncoder(passwordEncoder);
         return provider;
     }
-            
+
 }
