@@ -4,6 +4,7 @@ import com.prati.projetomercado.entity.*;
 import com.prati.projetomercado.repository.*;
 import com.prati.projetomercado.utils.ScraperUtils;
 import com.prati.projetomercado.utils.ScraperUtils.NfceData;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,25 +25,29 @@ public class NfceService {
     private final ItemRepository itemRepo;
 
     private Supermarket createSupermarket(NfceData data, User user) {
-        Supermarket newMarket = new Supermarket();
-        newMarket.setName(data.getStore());
-        newMarket.setCnpj(data.getCnpj());
-        newMarket.setStreet(data.getAddress().getStreet());
-        newMarket.setNumber(data.getAddress().getNumber());
-        newMarket.setComplement(data.getAddress().getComplement());
-        newMarket.setNeighborhood(data.getAddress().getNeighborhood());
-        newMarket.setCity(data.getAddress().getCity());
-        newMarket.setState(data.getAddress().getState());
-        newMarket.setCreatedByUser(user);
+        Supermarket newMarket = Supermarket.builder()
+                .name(data.getStore())
+                .cnpj(data.getCnpj())
+                .street(data.getAddress().getStreet())
+                .number(data.getAddress().getNumber())
+                .complement(data.getAddress().getComplement())
+                .neighborhood(data.getAddress().getNeighborhood())
+                .city(data.getAddress().getCity())
+                .state(data.getAddress().getState())
+                .createdByUser(user)
+                .build();
+
         return supermarketRepo.save(newMarket);
     }
 
     private Catalog createCatalog(ScraperUtils.Product p, Supermarket market) {
-        Catalog newCatalog = new Catalog();
-        newCatalog.setSupermarket(market);
-        newCatalog.setCode(p.getCode());
-        newCatalog.setName(p.getName());
-        newCatalog.setUnit(p.getUnit());
+        Catalog newCatalog = Catalog.builder()
+                .supermarket(market)
+                .code(p.getCode())
+                .name(p.getName())
+                .unit(p.getUnit())
+                .build();
+
         return catalogRepo.save(newCatalog);
     }
 
@@ -61,12 +66,14 @@ public class NfceService {
                 .orElseGet(() -> createSupermarket(data, user));
 
         // creates/inserts purchase
-        Purchase purchase = new Purchase();
-        purchase.setUser(user);
-        purchase.setSupermarket(market);
-        purchase.setAccessKey(data.getAccessKey());
-        purchase.setDate(data.getDate());
-        purchase.setTotalPrice(data.getTotalPrice());
+        Purchase purchase = Purchase.builder()
+                .user(user)
+                .supermarket(market)
+                .accessKey(data.getAccessKey())
+                .date(data.getDate())
+                .totalPrice(data.getTotalPrice())
+                .build();
+
         purchase = purchaseRepo.save(purchase);
 
         List<Item> itemsToSave = new ArrayList<>();
@@ -76,11 +83,12 @@ public class NfceService {
             Catalog catalog = catalogRepo.findBySupermarketAndCode(market, p.getCode())
                     .orElseGet(() -> createCatalog(p, market));
 
-            Item item = new Item();
-            item.setPurchase(purchase);
-            item.setCatalog(catalog);
-            item.setQuantity(p.getQuantity());
-            item.setUnitPrice(p.getPrice());
+            Item item = Item.builder()
+                    .purchase(purchase)
+                    .catalog(catalog)
+                    .quantity(p.getQuantity())
+                    .unitPrice(p.getPrice())
+                    .build();
 
             itemsToSave.add(item);
         }
