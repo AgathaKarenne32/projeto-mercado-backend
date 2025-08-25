@@ -1,10 +1,17 @@
 package com.prati.projetomercado.service;
 
-import com.prati.projetomercado.entity.*;
-import com.prati.projetomercado.repository.*;
+import com.prati.projetomercado.entity.AuthUser;
+import com.prati.projetomercado.entity.Catalog;
+import com.prati.projetomercado.entity.Item;
+import com.prati.projetomercado.entity.Purchase;
+import com.prati.projetomercado.entity.Supermarket;
+import com.prati.projetomercado.repository.AuthUserRepository;
+import com.prati.projetomercado.repository.CatalogRepository;
+import com.prati.projetomercado.repository.ItemRepository;
+import com.prati.projetomercado.repository.PurchaseRepository;
+import com.prati.projetomercado.repository.SupermarketRepository;
 import com.prati.projetomercado.utils.ScraperUtils;
 import com.prati.projetomercado.utils.ScraperUtils.NfceData;
-import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,13 +25,13 @@ import java.util.List;
 public class NfceService {
 
     private final ScraperUtils scraper;
-    private final UserRepository userRepo;
+    private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
     private final PurchaseRepository purchaseRepo;
     private final CatalogRepository catalogRepo;
     private final ItemRepository itemRepo;
 
-    private Supermarket createSupermarket(NfceData data, User user) {
+    private Supermarket createSupermarket(NfceData data, AuthUser user) {
         Supermarket newMarket = Supermarket.builder()
                 .name(data.getStore())
                 .cnpj(data.getCnpj())
@@ -58,10 +65,10 @@ public class NfceService {
         NfceData data = scraper.getData(url);
 
         // fetches user
-        User user = userRepo.findById(userId)
+        AuthUser user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // creates/inserts supermarket
+        // fetches supermarket or creates a new one
         Supermarket market = supermarketRepo.findByCnpj(data.getCnpj())
                 .orElseGet(() -> createSupermarket(data, user));
 
@@ -78,11 +85,12 @@ public class NfceService {
 
         List<Item> itemsToSave = new ArrayList<>();
 
-        // creates/inserts catalog and items
         for (ScraperUtils.Product p : data.getProducts()) {
+            // fetches catalog or creates a new one
             Catalog catalog = catalogRepo.findBySupermarketAndCode(market, p.getCode())
                     .orElseGet(() -> createCatalog(p, market));
 
+            // creates item and adds to items array
             Item item = Item.builder()
                     .purchase(purchase)
                     .catalog(catalog)
@@ -92,7 +100,7 @@ public class NfceService {
 
             itemsToSave.add(item);
         }
-        // saves all items in a single query
+        // inserts all items in a single query
         itemRepo.saveAll(itemsToSave);
 
         return data;

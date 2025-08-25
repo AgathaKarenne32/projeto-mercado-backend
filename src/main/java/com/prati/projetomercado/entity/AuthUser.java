@@ -41,7 +41,12 @@ public class AuthUser {
     @OneToMany(mappedBy = "authUser", cascade = CascadeType.ALL)
     private List<RefreshToken> refreshTokens = new ArrayList<>();
 
-
     @OneToMany(mappedBy = "authUser", cascade = CascadeType.ALL)
     private List<AccessToken> accessTokens = new ArrayList<>();
+
+    @OneToMany(mappedBy = "createdByUser")
+    private List<Supermarket> createdSupermarkets;
+
+    @OneToMany(mappedBy = "user")
+    private List<Purchase> purchases;
 }

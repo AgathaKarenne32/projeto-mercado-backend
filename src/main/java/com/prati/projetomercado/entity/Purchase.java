@@ -21,7 +21,7 @@ public class Purchase {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
-    private User user;
+    private AuthUser user;
 
     @ManyToOne
     @JoinColumn(name = "supermarket_id")

@@ -33,7 +33,7 @@ public class SecurityConfiguration {
             "/auth/refresh-token/",
             "/h2-console/**",
             "/h2-console/",
-            "/h2-console"
+            "/h2-console",
     };
     
     public static final String[] AUTH_REQUIRED_ENDPOINTS = {

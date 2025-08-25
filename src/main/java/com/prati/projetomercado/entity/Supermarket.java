@@ -29,7 +29,7 @@ public class Supermarket {
 
     @ManyToOne
     @JoinColumn(name = "created_by_user_id")
-    private User createdByUser;
+    private AuthUser createdByUser;
 
     @OneToMany(mappedBy = "supermarket")
     private List<Purchase> purchases;
