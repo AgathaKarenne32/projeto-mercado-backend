@@ -8,10 +8,12 @@ import com.prati.projetomercado.config.UserDetailsImpl;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.RefreshToken;
 import org.springframework.stereotype.Service;
-
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Set;
+import java.util.HashSet;
+
 
 @Service
 public class JwtTokenServiceImpl {
@@ -34,7 +36,12 @@ public class JwtTokenServiceImpl {
         }
     }
 
+
     public String getSubjectFromToken(String token) {
+        //deverá checar se o token está na blacklist antes de validar
+        if (isTokenInvalid(token)) {
+            throw new JWTVerificationException("Token foi invalidado (logout realizado)");
+        }
         try {
             var algorithm = Algorithm.HMAC256(SECRET_KEY);
             return JWT.require(algorithm).withIssuer(ISSUER).build().verify(token).getSubject();
@@ -59,5 +66,14 @@ public class JwtTokenServiceImpl {
         return refreshToken;
     }
 
+    private final Set<String> blacklist = new HashSet<>();
+
+    public void invalidateToken(String token) {
+        blacklist.add(token);
+    }
+
+    public boolean isTokenInvalid(String token) {
+        return blacklist.contains(token);
+    }
 
 }
