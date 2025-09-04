@@ -40,8 +40,6 @@ public class SecurityConfiguration {
             "/auth/refresh-token",
             "/auth/refresh-token/",
             "/h2-console/**",
-            "/h2-console/",
-            "/h2-console",
             "/oauth2/**"
     };
 
@@ -55,67 +53,58 @@ public class SecurityConfiguration {
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
 
-    @Autowired private OAuth2AuthSuccessHandler oAuth2AuthSuccessHandler;
+    @Autowired
+    private OAuth2AuthSuccessHandler oAuth2AuthSuccessHandler;
 
     @Bean
     public HttpCookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository() {
         return new HttpCookieOAuth2AuthorizationRequestRepository();
     }
 
-
     @Bean
     @Order(10)
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        return httpSecurity.csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource((CorsConfigurationSource) urlBasedCorsConfigurationSource()))
+        return httpSecurity
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .headers(HeadersConfigurer::disable)
-                .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                .authorizeHttpRequests(
-                        authorize -> authorize
-                                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                                .anyRequest().permitAll()
-                ).addFilterBefore(userAutenticationFilter, UsernamePasswordAuthenticationFilter.class)
-
-                .oauth2Login(
-                        configurer ->
-                                configurer.authorizationEndpoint(
-                                        endpoint -> endpoint
-                                                .baseUri("/oauth2/authorize")
-                                                .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository())
-
-                                )
-                                        .redirectionEndpoint(endpoint -> endpoint
-                                                .baseUri("/oauth2/callback/*"))
-                                        .userInfoEndpoint(endpoint -> endpoint
-                                                .userService(customOAuth2UserService))
-                                        .successHandler(oAuth2AuthSuccessHandler)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        .anyRequest().permitAll()
+                )
+                .addFilterBefore(userAutenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .oauth2Login(configurer -> configurer
+                        .authorizationEndpoint(endpoint -> endpoint
+                                .baseUri("/oauth2/authorize")
+                                .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository()))
+                        .redirectionEndpoint(endpoint -> endpoint.baseUri("/oauth2/callback/*"))
+                        .userInfoEndpoint(endpoint -> endpoint.userService(customOAuth2UserService))
+                        .successHandler(oAuth2AuthSuccessHandler)
                 )
                 .build();
-
     }
 
-    UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource() {
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("http://127.0.0.1:5173", "http://localhost:5173", "*"));
-        corsConfiguration.setAllowedMethods(List.of("GET","POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        corsConfiguration.setAllowedOrigins(List.of("http://127.0.0.1:5173", "http://localhost:5173"));
+        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         corsConfiguration.setAllowedHeaders(List.of("*"));
         corsConfiguration.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfiguration);
-
         return source;
-
     }
 
     @Bean
     public FilterRegistrationBean<UserAutenticationFilter> userAutenticationFilterFilterRegistrationBean() {
-        var filter = new FilterRegistrationBean<UserAutenticationFilter>();
+        FilterRegistrationBean<UserAutenticationFilter> filter = new FilterRegistrationBean<>();
         filter.setFilter(userAutenticationFilter);
         filter.addUrlPatterns(AUTH_REQUIRED_ENDPOINTS);
         return filter;
     }
-
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
@@ -128,13 +117,10 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider(
-            UserDetailsServiceImpl userDetailsService, PasswordEncoder passwordEncoder
-    ) {
-        var provider = new DaoAuthenticationProvider();
+    public DaoAuthenticationProvider authenticationProvider(UserDetailsServiceImpl userDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         return provider;
     }
-
 }
