@@ -97,8 +97,10 @@ public class SecurityConfiguration {
 
     UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("http://127.0.0.1:5173", "localhost:5173", "*"));
-        corsConfiguration.setAllowedOrigins(List.of("GET","POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        corsConfiguration.setAllowedOrigins(List.of("http://127.0.0.1:5173", "http://localhost:5173", "*"));
+        corsConfiguration.setAllowedMethods(List.of("GET","POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        corsConfiguration.setAllowedHeaders(List.of("*"));
+        corsConfiguration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfiguration);
 
