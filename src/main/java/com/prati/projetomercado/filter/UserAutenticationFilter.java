@@ -53,15 +53,20 @@ public class UserAutenticationFilter extends OncePerRequestFilter {
         String token = recoveryToken(request);
 
         if (token == null) {
-            throw new RuntimeException("no token");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No token found");
         }
 
         var subject = jwtTokenService.getSubjectFromToken(token);
-        var user = authUserRepository.findByEmail(subject).orElseThrow();
+        var user = authUserRepository.findByEmail(subject).orElse(null);
+        if (user == null) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found");
+            return;
+        }
         var accessTokenFromRepo = accessTokenRepository.findByAuthUser(user);
 
         if (accessTokenFromRepo.getExpiredDate().isBefore(Instant.now()))
-            throw new RuntimeException("accessToken expired");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "accessToken expired");
 
         var userDetails = new UserDetailsImpl(user);
 

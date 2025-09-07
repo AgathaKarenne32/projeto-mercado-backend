@@ -6,10 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/nfce")
@@ -26,9 +23,9 @@ public class NfceController {
     }
 
     @PostMapping("/scrape")
-    public ResponseEntity<?> scrapeNfce(@RequestBody UrlRequest request) {
+    public ResponseEntity<?> scrapeNfce(@RequestHeader("Authorization") String authorization, @RequestBody UrlRequest request) {
         try {
-            NfceData data = nfceService.processNfce(request.getUrl(), request.getUserId());
+            NfceData data = nfceService.processNfce(request.getUrl(), authorization);
             return ResponseEntity.ok(data);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

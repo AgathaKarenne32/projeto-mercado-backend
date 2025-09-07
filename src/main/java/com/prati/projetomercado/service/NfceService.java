@@ -5,13 +5,16 @@ import com.prati.projetomercado.entity.Catalog;
 import com.prati.projetomercado.entity.Item;
 import com.prati.projetomercado.entity.Purchase;
 import com.prati.projetomercado.entity.Supermarket;
+import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
 import com.prati.projetomercado.repository.ItemRepository;
 import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
+import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.utils.ScraperUtils;
 import com.prati.projetomercado.utils.ScraperUtils.NfceData;
+import com.prati.projetomercado.utils.TokenUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,8 @@ public class NfceService {
     private final PurchaseRepository purchaseRepo;
     private final CatalogRepository catalogRepo;
     private final ItemRepository itemRepo;
+    private final JwtTokenServiceImpl jwtTokenServiceImpl;
+    private JwtTokenServiceImpl tokenService;
 
     private Supermarket createSupermarket(NfceData data, AuthUser user) {
         Supermarket newMarket = Supermarket.builder()
@@ -60,13 +65,15 @@ public class NfceService {
 
     // if an error occurs, the transaction is rolled back and nothing is sent to DB
     @Transactional(rollbackFor = Exception.class)
-    public NfceData processNfce(String url, Long userId) throws IOException {
+    public NfceData processNfce(String url, String accessToken) throws IOException {
         // scrapes nfc-e
         NfceData data = scraper.getData(url);
 
         // fetches user
-        AuthUser user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        System.out.println(accessToken);
+        var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
+        AuthUser user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new AuthException("User account not found"));
 
         // fetches supermarket or creates a new one
         Supermarket market = supermarketRepo.findByCnpj(data.getCnpj())

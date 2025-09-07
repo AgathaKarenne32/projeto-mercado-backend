@@ -40,12 +40,14 @@ public class SecurityConfiguration {
             "/auth/refresh-token",
             "/auth/refresh-token/",
             "/h2-console/**",
-            "/oauth2/**"
+            "/oauth2/**",
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            "/v3/api-docs/**"
     };
 
     public static final String[] AUTH_REQUIRED_ENDPOINTS = {
             "/auth/test-autenticated",
-            "/api/nfce/scrape"
     };
 
     @Autowired

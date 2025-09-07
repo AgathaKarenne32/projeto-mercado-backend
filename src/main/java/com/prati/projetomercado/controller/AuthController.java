@@ -4,6 +4,7 @@ package com.prati.projetomercado.controller;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
+import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.service.UserService;
@@ -33,17 +34,17 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody CreateUserRequest userRequest) {
+    public ResponseEntity<Object> register(@RequestBody CreateUserRequest userRequest) {
         String username = userRequest.username();
         String password = userRequest.password();
         String confirmPassword = userRequest.confirmPassword();
 
         if (!password.equals(confirmPassword)) {
-            return ResponseEntity.badRequest().body("As senhas não conferem!");
+            return ResponseEntity.badRequest().body(new ErrorResponse("as senhas não conferem"));
         }
 
         if (password.length() < 8) {
-            return ResponseEntity.badRequest().body("A senha deve ter pelo menos 8 caracteres!");
+            return ResponseEntity.badRequest().body(new ErrorResponse("as senhas devem ter no mínimo 8 caracteres"));
         }
 
         userService.registerUser(userRequest);

@@ -46,6 +46,7 @@ public class JwtTokenServiceImpl {
             var algorithm = Algorithm.HMAC256(SECRET_KEY);
             return JWT.require(algorithm).withIssuer(ISSUER).build().verify(token).getSubject();
         } catch (JWTVerificationException e) {
+            e.printStackTrace();
             throw new JWTVerificationException("Invalid/expired token");
             
         }

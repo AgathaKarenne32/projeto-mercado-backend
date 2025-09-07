@@ -4,6 +4,9 @@ import com.prati.projetomercado.config.UserDetailsImpl;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
 import com.prati.projetomercado.entity.AccessToken;
+import com.prati.projetomercado.exceptions.AuthException;
+import com.prati.projetomercado.exceptions.BadCredentialsException;
+import com.prati.projetomercado.exceptions.FieldError;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.repository.AccessTokenRepository;
@@ -17,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,10 +45,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void registerUser(CreateUserRequest createUserRequest) {
-        var newUser = AuthUser.builder()
-                .email(createUserRequest.email())
-                .password(encoder.encode(createUserRequest.password()))
-                .build();
+        if (!createUserRequest.password().equals(createUserRequest.confirmPassword())) {
+            throw new BadCredentialsException(
+                    List.of(new FieldError("confirmPassword", "Passwords don't match"), new FieldError("password", "Passwords don't match")));
+        }
+
+        if (createUserRequest.password().length() < 6) throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 6 characters")));
+
+        var newUser = AuthUser.builder().email(createUserRequest.email()).username(createUserRequest.username()).password(encoder.encode(createUserRequest.password())).build();
         userRepository.save(newUser);
     }
 
@@ -56,14 +64,12 @@ public class UserServiceImpl implements UserService {
         try {
             authentication = authenticationManager.authenticate(usernamePasswordAuthenticationToken);
         } catch (Exception e) {
-            throw new Exception("Auth manager error", e);
+            throw new AuthException("Auth manager error");
         }
 
         var userDetailsImpl = (UserDetailsImpl) authentication.getPrincipal();
 
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(
-               userDetailsImpl.getAuthUser()
-        );
+        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(userDetailsImpl.getAuthUser());
 
         if (accessTokenEntityOld != null) {
             accessTokenRepository.delete(accessTokenEntityOld);
@@ -74,11 +80,7 @@ public class UserServiceImpl implements UserService {
         refreshTokenRepository.save(refreshToken);
         var accessTokenExpirationDate = jwtTokenService.expirationAccessTokenDate();
         var accessToken = jwtTokenService.generateToken(userDetailsImpl.getAuthUser(), accessTokenExpirationDate);
-        var accessTokenEntity = AccessToken.builder()
-                .authUser(userDetailsImpl.getAuthUser())
-                .token(accessToken)
-                .expiredDate(accessTokenExpirationDate)
-                .build();
+        var accessTokenEntity = AccessToken.builder().authUser(userDetailsImpl.getAuthUser()).token(accessToken).expiredDate(accessTokenExpirationDate).build();
         accessTokenRepository.save(accessTokenEntity);
 
         return new JwtToken(accessToken, refreshToken.getId());
@@ -93,36 +95,29 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId) {
-        final var refreshToken = refreshTokenRepository.findByIdAndExpiresAtAfter(refreshTokenId, Instant.now())
-                .orElseThrow(() -> new RuntimeException("Refresh token expired"));
+        final var refreshToken = refreshTokenRepository.findByIdAndExpiresAtAfter(refreshTokenId, Instant.now()).orElseThrow(() -> new AuthException("No refreshToken found / refreshToken expired"));
 
         if (refreshToken.isAlreadyUsed()) {
-            throw new RuntimeException("Token has already been used");
+            throw new AuthException("Token has already been used");
         }
 
         refreshToken.setAlreadyUsed(true);
         refreshTokenRepository.save(refreshToken);
 
-        var authuser = getAuthUser(accessToken).orElseThrow(() -> new RuntimeException("user not found"));
+        var authuser = getAuthUser(accessToken).orElseThrow(() -> new AuthException("user not found"));
 
         var newRefreshToken = jwtTokenService.generateNewRefreshToken(authuser);
         refreshTokenRepository.save(newRefreshToken);
         var newAccessTokenExpDate = jwtTokenService.expirationAccessTokenDate();
         var newAccessToken = jwtTokenService.generateToken(authuser, newAccessTokenExpDate);
 
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(
-                authuser
-        );
+        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(authuser);
 
         if (accessTokenEntityOld != null) {
             accessTokenRepository.delete(accessTokenEntityOld);
         }
 
-        var newAccessTokenEntity = AccessToken.builder()
-                .authUser(authuser)
-                .token(newAccessToken)
-                .expiredDate(newAccessTokenExpDate)
-                .build();
+        var newAccessTokenEntity = AccessToken.builder().authUser(authuser).token(newAccessToken).expiredDate(newAccessTokenExpDate).build();
 
         accessTokenRepository.save(newAccessTokenEntity);
 
