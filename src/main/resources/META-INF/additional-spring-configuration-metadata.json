@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "app.auth.oauth2.authorizedRedirectURis",
+      "type": "java.lang.String",
+      "description": "Description for app.auth.oauth2.authorizedRedirectURis."
+  }
+] }
