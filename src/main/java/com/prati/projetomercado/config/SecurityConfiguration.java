@@ -45,6 +45,7 @@ public class SecurityConfiguration {
 
     public static final String[] AUTH_REQUIRED_ENDPOINTS = {
             "/auth/test-autenticated",
+            "/api/nfce/scrape"
     };
 
     @Autowired
