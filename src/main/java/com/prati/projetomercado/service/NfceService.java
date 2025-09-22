@@ -45,8 +45,8 @@ public class NfceService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public NfceDataRequest processNfceManual(NfceDataRequest dto, String accessToken) {
-        return saveNfce(dto, accessToken);
+    public void processNfceManual(NfceDataRequest dto, String accessToken) {
+        saveNfce(dto, accessToken);
     }
 
     private Supermarket createSupermarket(NfceDataRequest dto, AuthUser user) {

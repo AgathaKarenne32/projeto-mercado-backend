@@ -2,8 +2,10 @@ package com.prati.projetomercado.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -39,4 +41,7 @@ public class Purchase {
 
     @OneToMany(mappedBy = "purchase")
     private List<Item> items;
+
+    @CreationTimestamp
+    private Instant creationDate;
 }

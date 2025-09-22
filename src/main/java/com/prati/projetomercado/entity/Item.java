@@ -2,8 +2,10 @@ package com.prati.projetomercado.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 @Entity
 @Table(name = "item")
@@ -30,4 +32,7 @@ public class Item {
 
     @Column(name = "unit_price")
     private BigDecimal unitPrice;
+
+    @CreationTimestamp
+    private Instant creationDate;
 }

@@ -25,11 +25,9 @@ public class NfceController {
         private String url;
     }
 
+    // rota para cadastrar nfce pelo link
     @PostMapping("/scrape")
-    public ResponseEntity<Map<String, Object>> scrapeNfce(
-            @RequestHeader("Authorization") String authorization,
-            @RequestBody UrlRequest request
-    ) throws IOException {
+    public ResponseEntity<Map<String, Object>> scrapeNfce(@RequestHeader("Authorization") String authorization, @RequestBody UrlRequest request) throws IOException {
         NfceDataRequest data = nfceService.processNfceLink(request.getUrl(), authorization);
         return ResponseEntity.ok(
                 Map.of(
@@ -39,12 +37,10 @@ public class NfceController {
         );
     }
 
+    // rota para cadastrar nfce manualmente
     @PostMapping("/manual")
-    public ResponseEntity<Map<String, Object>> manualNfce(
-            @RequestHeader("Authorization") String authorization,
-            @RequestBody NfceDataRequest manualData
-    ) {
-        NfceDataRequest data = nfceService.processNfceManual(manualData, authorization);
+    public ResponseEntity<Map<String, Object>> manualNfce(@RequestHeader("Authorization") String authorization, @RequestBody NfceDataRequest manualData) {
+        nfceService.processNfceManual(manualData, authorization);
         return ResponseEntity.ok(
                 Map.of(
                         "statusMessage", "Nota fiscal cadastrada com sucesso.",
