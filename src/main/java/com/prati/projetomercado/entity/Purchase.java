@@ -3,6 +3,7 @@ package com.prati.projetomercado.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -34,7 +35,7 @@ public class Purchase {
     private LocalDate date;
 
     @Column(name = "total_price")
-    private Double totalPrice;
+    private BigDecimal totalPrice;
 
     @OneToMany(mappedBy = "purchase")
     private List<Item> items;

@@ -1,8 +1,8 @@
 package com.prati.projetomercado.controller;
 
+import com.prati.projetomercado.dto.request.NfceDataRequest;
 import com.prati.projetomercado.exceptions.DuplicateNfceException;
 import com.prati.projetomercado.service.NfceService;
-import com.prati.projetomercado.utils.ScraperUtils.NfceData;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -16,6 +16,7 @@ import java.util.Map;
 @RequestMapping("/api/nfce")
 @RequiredArgsConstructor
 public class NfceController {
+
     private final NfceService nfceService;
 
     @Setter
@@ -25,13 +26,35 @@ public class NfceController {
     }
 
     @PostMapping("/scrape")
-    public ResponseEntity<?> scrapeNfce(@RequestHeader("Authorization") String authorization,@RequestBody UrlRequest request) throws IOException {
-        NfceData data = nfceService.processNfce(request.getUrl(), authorization);
-        return ResponseEntity.ok(data);
+    public ResponseEntity<Map<String, Object>> scrapeNfce(
+            @RequestHeader("Authorization") String authorization,
+            @RequestBody UrlRequest request
+    ) throws IOException {
+        NfceDataRequest data = nfceService.processNfceLink(request.getUrl(), authorization);
+        return ResponseEntity.ok(
+                Map.of(
+                        "statusMessage", data,
+                        "success", true
+                )
+        );
+    }
+
+    @PostMapping("/manual")
+    public ResponseEntity<Map<String, Object>> manualNfce(
+            @RequestHeader("Authorization") String authorization,
+            @RequestBody NfceDataRequest manualData
+    ) {
+        NfceDataRequest data = nfceService.processNfceManual(manualData, authorization);
+        return ResponseEntity.ok(
+                Map.of(
+                        "statusMessage", "Nota fiscal cadastrada com sucesso.",
+                        "success", true
+                )
+        );
     }
 
     @ExceptionHandler(DuplicateNfceException.class)
-    public ResponseEntity<?> handleDuplicateKey(DuplicateNfceException e) {
+    public ResponseEntity<?> handleDuplicateNfce(DuplicateNfceException e) {
         return ResponseEntity.badRequest().body(
                 Map.of(
                         "statusMessage", e.getMessage(),

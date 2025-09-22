@@ -1,5 +1,7 @@
 package com.prati.projetomercado.service;
 
+import com.prati.projetomercado.dto.request.NfceDataRequest;
+import com.prati.projetomercado.dto.request.ProductRequest;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.Catalog;
 import com.prati.projetomercado.entity.Item;
@@ -14,7 +16,6 @@ import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.utils.ScraperUtils;
-import com.prati.projetomercado.utils.ScraperUtils.NfceData;
 import com.prati.projetomercado.utils.TokenUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,6 +29,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class NfceService {
+
     private final ScraperUtils scraper;
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
@@ -35,58 +37,56 @@ public class NfceService {
     private final CatalogRepository catalogRepo;
     private final ItemRepository itemRepo;
     private final JwtTokenServiceImpl jwtTokenServiceImpl;
-    private JwtTokenServiceImpl tokenService;
 
-    private Supermarket createSupermarket(NfceData data, AuthUser user) {
-        Supermarket newMarket = Supermarket.builder()
-                .name(data.getStore())
-                .cnpj(data.getCnpj())
-                .street(data.getAddress().getStreet())
-                .number(data.getAddress().getNumber())
-                .complement(data.getAddress().getComplement())
-                .neighborhood(data.getAddress().getNeighborhood())
-                .city(data.getAddress().getCity())
-                .state(data.getAddress().getState())
-                .createdByUser(user)
-                .build();
-
-        return supermarketRepo.save(newMarket);
-    }
-
-    private Catalog createCatalog(ScraperUtils.Product p, Supermarket market) {
-        Catalog newCatalog = Catalog.builder()
-                .supermarket(market)
-                .code(p.getCode())
-                .name(p.getName())
-                .unit(p.getUnit())
-                .build();
-
-        return catalogRepo.save(newCatalog);
-    }
-
-    // if an error occurs, the transaction is rolled back and nothing is sent to DB
     @Transactional(rollbackFor = Exception.class)
-    public NfceData processNfce(String url, String accessToken) throws IOException {
-        // scrapes nfc-e
-        NfceData data = scraper.getData(url);
+    public NfceDataRequest processNfceLink(String url, String accessToken) throws IOException {
+        NfceDataRequest dto = scraper.getData(url);
+        return saveNfce(dto, accessToken);
+    }
 
-        // fetches user
-        System.out.println(accessToken);
+    @Transactional(rollbackFor = Exception.class)
+    public NfceDataRequest processNfceManual(NfceDataRequest dto, String accessToken) {
+        return saveNfce(dto, accessToken);
+    }
+
+    private Supermarket createSupermarket(NfceDataRequest dto, AuthUser user) {
+        var address = dto.address();
+        return supermarketRepo.save(Supermarket.builder()
+                .name(dto.store())
+                .cnpj(dto.cnpj())
+                .street(address.street())
+                .number(address.number())
+                .complement(address.complement())
+                .neighborhood(address.neighborhood())
+                .city(address.city())
+                .state(address.state())
+                .createdByUser(user)
+                .build());
+    }
+
+    private Catalog createCatalog(ProductRequest p, Supermarket market) {
+        return catalogRepo.save(Catalog.builder()
+                .supermarket(market)
+                .code(p.code())
+                .name(p.name())
+                .unit(p.unit())
+                .build());
+    }
+
+    private NfceDataRequest saveNfce(NfceDataRequest dto, String accessToken) {
         var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
         AuthUser user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new AuthException("Usuário não encontrado."));
 
-        // fetches supermarket or creates a new one
-        Supermarket market = supermarketRepo.findByCnpj(data.getCnpj())
-                .orElseGet(() -> createSupermarket(data, user));
+        Supermarket market = supermarketRepo.findByCnpj(dto.cnpj())
+                .orElseGet(() -> createSupermarket(dto, user));
 
-        // creates/inserts purchase
         Purchase purchase = Purchase.builder()
                 .user(user)
                 .supermarket(market)
-                .accessKey(data.getAccessKey())
-                .date(data.getDate())
-                .totalPrice(data.getTotalPrice())
+                .accessKey(dto.accessKey())
+                .date(dto.date())
+                .totalPrice(dto.totalPrice())
                 .build();
 
         try {
@@ -96,25 +96,21 @@ public class NfceService {
         }
 
         List<Item> itemsToSave = new ArrayList<>();
-
-        for (ScraperUtils.Product p : data.getProducts()) {
-            // fetches catalog or creates a new one
-            Catalog catalog = catalogRepo.findBySupermarketAndCode(market, p.getCode())
+        for (ProductRequest p : dto.products()) {
+            Catalog catalog = catalogRepo.findBySupermarketAndCode(market, p.code())
                     .orElseGet(() -> createCatalog(p, market));
 
-            // creates item and adds to items array
             Item item = Item.builder()
                     .purchase(purchase)
                     .catalog(catalog)
-                    .quantity(p.getQuantity())
-                    .unitPrice(p.getPrice())
+                    .quantity(p.quantity())
+                    .unitPrice(p.price())
                     .build();
 
             itemsToSave.add(item);
         }
-        // inserts all items in a single query
         itemRepo.saveAll(itemsToSave);
 
-        return data;
+        return dto;
     }
 }

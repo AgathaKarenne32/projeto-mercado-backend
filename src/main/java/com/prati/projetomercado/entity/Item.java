@@ -3,6 +3,8 @@ package com.prati.projetomercado.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "item")
 @Getter
@@ -27,5 +29,5 @@ public class Item {
     private Double quantity;
 
     @Column(name = "unit_price")
-    private Double unitPrice;
+    private BigDecimal unitPrice;
 }
