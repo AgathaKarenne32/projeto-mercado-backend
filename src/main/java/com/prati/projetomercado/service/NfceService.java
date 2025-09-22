@@ -6,6 +6,7 @@ import com.prati.projetomercado.entity.Item;
 import com.prati.projetomercado.entity.Purchase;
 import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
+import com.prati.projetomercado.exceptions.DuplicateNfceException;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
 import com.prati.projetomercado.repository.ItemRepository;
@@ -16,6 +17,7 @@ import com.prati.projetomercado.utils.ScraperUtils;
 import com.prati.projetomercado.utils.ScraperUtils.NfceData;
 import com.prati.projetomercado.utils.TokenUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +28,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class NfceService {
-
     private final ScraperUtils scraper;
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
@@ -73,7 +74,7 @@ public class NfceService {
         System.out.println(accessToken);
         var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
         AuthUser user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new AuthException("User account not found"));
+                .orElseThrow(() -> new AuthException("Usuário não encontrado."));
 
         // fetches supermarket or creates a new one
         Supermarket market = supermarketRepo.findByCnpj(data.getCnpj())
@@ -88,7 +89,11 @@ public class NfceService {
                 .totalPrice(data.getTotalPrice())
                 .build();
 
-        purchase = purchaseRepo.save(purchase);
+        try {
+            purchase = purchaseRepo.save(purchase);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateNfceException("Nota fiscal já existe.");
+        }
 
         List<Item> itemsToSave = new ArrayList<>();
 
