@@ -18,6 +18,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.prati.projetomercado.dto.response.UserResponse;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import com.prati.projetomercado.dto.request.ChangePasswordRequest;
+
 
 import java.time.Instant;
 import java.util.List;
@@ -123,5 +128,53 @@ public class UserServiceImpl implements UserService {
 
         return new JwtToken(newAccessToken, newRefreshToken.getId());
 
+    }
+
+    @Override
+    public UserResponse getUserInfo() {
+        // 1. Pega o email do usuário a partir do token de segurança
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // 2. Busca o usuário completo no banco de dados usando o email
+        AuthUser authUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado com o email: " + email));
+
+        // 3. Converte a entidade AuthUser para o nosso DTO de resposta seguro
+        return new UserResponse(
+                authUser.getId(),
+                authUser.getUsername(),
+                authUser.getEmail(),
+                authUser.getCreationDate()
+        );
+    }
+
+    @Override
+    public void changePassword(ChangePasswordRequest request) {
+        // 1. Pega o email do usuário a partir do token de segurança
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        AuthUser currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado."));
+
+        // 2. Verifica se a "senha atual" fornecida bate com a senha salva no banco.
+        // O passwordEncoder.matches() compara a senha em texto plano com a senha criptografada.
+        if (!encoder.matches(request.currentPassword(), currentUser.getPassword())) {
+            throw new BadCredentialsException(List.of(new FieldError("currentPassword", "A senha atual está incorreta."))); // TODO: Criar exceção customizada se preferir
+        }
+
+        // 3. Verifica se a "nova senha" e a "confirmação" são iguais.
+        if (!request.newPassword().equals(request.confirmNewPassword())) {
+            throw new BadCredentialsException(List.of(new FieldError("confirmNewPassword", "A nova senha e a confirmação não conferem.")));
+        }
+
+        // 4. (Opcional, mas recomendado) Adicionar validações para a nova senha.
+        if (request.newPassword().length() < 8) {
+            throw new BadCredentialsException(List.of(new FieldError("newPassword", "A nova senha deve ter no mínimo 8 caracteres.")));
+        }
+
+        // 5. Se todas as verificações passaram, criptografa e atualiza a senha.
+        currentUser.setPassword(encoder.encode(request.newPassword()));
+
+        // 6. Salva o usuário com a nova senha no banco de dados.
+        userRepository.save(currentUser);
     }
 }
