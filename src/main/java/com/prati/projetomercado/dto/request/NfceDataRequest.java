@@ -11,5 +11,5 @@ public record NfceDataRequest(
         String accessKey,
         LocalDate date,
         BigDecimal totalPrice,
-        List<ProductRequest> products
+        List<ItemRequest> products
 ) {}

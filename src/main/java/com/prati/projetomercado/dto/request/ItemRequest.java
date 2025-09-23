@@ -2,10 +2,10 @@ package com.prati.projetomercado.dto.request;
 
 import java.math.BigDecimal;
 
-public record ProductRequest(
+public record ItemRequest(
         String name,
         String code,
-        Double quantity,
+        BigDecimal quantity,
         String unit,
         BigDecimal price
 ) {}

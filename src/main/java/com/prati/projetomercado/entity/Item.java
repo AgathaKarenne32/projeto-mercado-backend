@@ -28,7 +28,7 @@ public class Item {
     @JoinColumn(name = "catalog_id")
     private Catalog catalog;
 
-    private Double quantity;
+    private BigDecimal quantity;
 
     @Column(name = "unit_price")
     private BigDecimal unitPrice;

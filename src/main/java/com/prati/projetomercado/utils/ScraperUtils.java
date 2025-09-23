@@ -1,7 +1,7 @@
 package com.prati.projetomercado.utils;
 
 import com.prati.projetomercado.dto.request.NfceDataRequest;
-import com.prati.projetomercado.dto.request.ProductRequest;
+import com.prati.projetomercado.dto.request.ItemRequest;
 import com.prati.projetomercado.dto.request.AddressRequest;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -30,7 +30,7 @@ public class ScraperUtils {
     public NfceDataRequest getData(String url) throws IOException {
 
         Document doc = Jsoup.connect(url).get();
-        List<ProductRequest> products = new ArrayList<>();
+        List<ItemRequest> products = new ArrayList<>();
 
         // gets store information
         Elements storeInfo = doc.select("div#conteudo div.txtCenter > div");
@@ -63,18 +63,22 @@ public class ScraperUtils {
 
             String name = spans.get(0).text();
             String code = spans.get(1).text().replaceAll("\\D+", "").trim();
-            Double quantity = Double.parseDouble(spans.get(2).text()
+
+            String quantityString = spans.get(2).text()
                     .replace("Qtde.:", "")
                     .trim()
-                    .replace(",", "."));
+                    .replace(",", ".");
+            BigDecimal quantity = new BigDecimal(quantityString);
+
             String unit = spans.get(3).text().split(":")[1].trim();
+
             String priceString = spans.get(4).text()
                     .replaceAll("[^\\d,]", "")
                     .replace(",", ".");
 
             BigDecimal price = new BigDecimal(priceString);
 
-            products.add(new ProductRequest(name, code, quantity, unit, price));
+            products.add(new ItemRequest(name, code, quantity, unit, price));
         }
 
         return new NfceDataRequest(store, cnpj, address, accessKey, date, totalPrice, products);
