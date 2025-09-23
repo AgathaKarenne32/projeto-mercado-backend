@@ -44,4 +44,7 @@ public class Purchase {
 
     @CreationTimestamp
     private Instant creationDate;
+
+    @Column(name = "manual", nullable = false)
+    private boolean manual;
 }

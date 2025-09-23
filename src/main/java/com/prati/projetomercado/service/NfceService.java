@@ -8,7 +8,6 @@ import com.prati.projetomercado.entity.Item;
 import com.prati.projetomercado.entity.Purchase;
 import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
-import com.prati.projetomercado.exceptions.DuplicateNfceException;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
 import com.prati.projetomercado.repository.ItemRepository;
@@ -41,12 +40,12 @@ public class NfceService {
     @Transactional(rollbackFor = Exception.class)
     public NfceDataRequest processNfceLink(String url, String accessToken) throws IOException {
         NfceDataRequest dto = scraper.getData(url);
-        return saveNfce(dto, accessToken);
+        return saveNfce(dto, accessToken, false);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void processNfceManual(NfceDataRequest dto, String accessToken) {
-        saveNfce(dto, accessToken);
+        saveNfce(dto, accessToken, true);
     }
 
     private Supermarket createSupermarket(NfceDataRequest dto, AuthUser user) {
@@ -73,7 +72,7 @@ public class NfceService {
                 .build());
     }
 
-    private NfceDataRequest saveNfce(NfceDataRequest dto, String accessToken) {
+    private NfceDataRequest saveNfce(NfceDataRequest dto, String accessToken, boolean isManual) {
         var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
         AuthUser user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new AuthException("Usuário não encontrado."));
@@ -87,12 +86,13 @@ public class NfceService {
                 .accessKey(dto.accessKey())
                 .date(dto.date())
                 .totalPrice(dto.totalPrice())
+                .manual(isManual)
                 .build();
 
         try {
             purchase = purchaseRepo.save(purchase);
         } catch (DataIntegrityViolationException e) {
-            throw new DuplicateNfceException("Nota fiscal já existe.");
+            throw new RuntimeException("Nota fiscal já existe.");
         }
 
         List<Item> itemsToSave = new ArrayList<>();

@@ -1,7 +1,6 @@
 package com.prati.projetomercado.controller;
 
 import com.prati.projetomercado.dto.request.NfceDataRequest;
-import com.prati.projetomercado.exceptions.DuplicateNfceException;
 import com.prati.projetomercado.service.NfceService;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -49,8 +48,8 @@ public class NfceController {
         );
     }
 
-    @ExceptionHandler(DuplicateNfceException.class)
-    public ResponseEntity<?> handleDuplicateNfce(DuplicateNfceException e) {
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, Object>> handleRuntime(RuntimeException e) {
         return ResponseEntity.badRequest().body(
                 Map.of(
                         "statusMessage", e.getMessage(),
