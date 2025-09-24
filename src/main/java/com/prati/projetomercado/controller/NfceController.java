@@ -53,7 +53,7 @@ public class NfceController {
         nfceService.registerNfceManual(authorization, manualData);
         return ResponseEntity.ok(
                 Map.of(
-                        "statusMessage", "Nota fiscal cadastrada manualmente com sucesso.",
+                        "statusMessage", "Nota fiscal manual cadastrada com sucesso.",
                         "success", true
                 )
         );

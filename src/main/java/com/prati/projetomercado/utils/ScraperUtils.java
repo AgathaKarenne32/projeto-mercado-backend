@@ -85,9 +85,11 @@ public class ScraperUtils {
 
             return new NfceDataRequest(store, cnpj, address, accessKey, date, totalPrice, products);
         } catch (IOException e) {
-            throw new NfceFetchException("Erro ao buscar dados da URL");
+            throw new NfceFetchException("Erro ao buscar dados da página");
         } catch (IllegalArgumentException e) {
             throw new NfceFetchException ("URL inválida.");
+        } catch (IndexOutOfBoundsException | NullPointerException e) {
+            throw new NfceFetchException("A estrutura da página está diferente do esperado.");
         }
     }
 }
