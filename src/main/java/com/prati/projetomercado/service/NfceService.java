@@ -41,20 +41,20 @@ public class NfceService {
 
     @Transactional(rollbackFor = Exception.class)
     public NfceDataRequest registerNfceLink(String url, String accessToken) throws IOException {
-        NfceDataRequest dto = scraper.getData(url);
-        return saveNfce(dto, accessToken, false);
+        NfceDataRequest nfceData = scraper.getData(url);
+        return saveNfce(nfceData, accessToken, false);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void registerNfceManual(NfceDataRequest dto, String accessToken) {
-        saveNfce(dto, accessToken, true);
+    public void registerNfceManual(NfceDataRequest nfceData, String accessToken) {
+        saveNfce(nfceData, accessToken, true);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void updateNfce(NfceDataRequest dto, String accessToken) {
+    public void updateNfce(NfceDataRequest nfceData, String accessToken) {
         AuthUser user = getAuthenticatedUser(accessToken);
 
-        Purchase purchase = purchaseRepo.findByAccessKey(dto.accessKey())
+        Purchase purchase = purchaseRepo.findByAccessKey(nfceData.accessKey())
                 .orElseThrow(() -> new RuntimeException("Nota fiscal não encontrada."));
 
         if (!purchase.isManual()) {
@@ -68,14 +68,14 @@ public class NfceService {
         Supermarket existingSupermarket = purchase.getSupermarket();
         Supermarket updatedSupermarket = Supermarket.builder()
                 .id(existingSupermarket.getId())
-                .name(dto.store())
-                .cnpj(dto.cnpj())
-                .street(dto.address().street())
-                .number(dto.address().number())
-                .complement(dto.address().complement())
-                .neighborhood(dto.address().neighborhood())
-                .city(dto.address().city())
-                .state(dto.address().state())
+                .name(nfceData.store())
+                .cnpj(nfceData.cnpj())
+                .street(nfceData.address().street())
+                .number(nfceData.address().number())
+                .complement(nfceData.address().complement())
+                .neighborhood(nfceData.address().neighborhood())
+                .city(nfceData.address().city())
+                .state(nfceData.address().state())
                 .createdByUser(existingSupermarket.getCreatedByUser())
                 .creationDate(existingSupermarket.getCreationDate())
                 .build();
@@ -83,12 +83,12 @@ public class NfceService {
         supermarketRepo.save(updatedSupermarket);
 
         purchase.setSupermarket(updatedSupermarket);
-        purchase.setAccessKey(dto.accessKey());
-        purchase.setDate(dto.date());
-        purchase.setTotalPrice(dto.totalPrice());
+        purchase.setAccessKey(nfceData.accessKey());
+        purchase.setDate(nfceData.date());
+        purchase.setTotalPrice(nfceData.totalPrice());
 
         purchase.getItems().clear();
-        for (ItemRequest product : dto.products()) {
+        for (ItemRequest product : nfceData.products()) {
             Catalog catalog = catalogRepo.findBySupermarketAndCode(updatedSupermarket, product.code())
                     .orElseGet(() -> createCatalog(product, updatedSupermarket));
 
@@ -105,11 +105,11 @@ public class NfceService {
         purchaseRepo.save(purchase);
     }
 
-    private Supermarket createSupermarket(NfceDataRequest dto, AuthUser user) {
-        AddressRequest address = dto.address();
+    private Supermarket createSupermarket(NfceDataRequest nfceData, AuthUser user) {
+        AddressRequest address = nfceData.address();
         return supermarketRepo.save(Supermarket.builder()
-                .name(dto.store())
-                .cnpj(dto.cnpj())
+                .name(nfceData.store())
+                .cnpj(nfceData.cnpj())
                 .street(address.street())
                 .number(address.number())
                 .complement(address.complement())
@@ -136,19 +136,19 @@ public class NfceService {
                 .orElseThrow(() -> new AuthException("Usuário não encontrado."));
     }
 
-    private NfceDataRequest saveNfce(NfceDataRequest dto, String accessToken, boolean isManual) {
+    private NfceDataRequest saveNfce(NfceDataRequest nfceData, String accessToken, boolean isManual) {
 
         AuthUser user = getAuthenticatedUser(accessToken);
 
-        Supermarket market = supermarketRepo.findByCnpj(dto.cnpj())
-                .orElseGet(() -> createSupermarket(dto, user));
+        Supermarket market = supermarketRepo.findByCnpj(nfceData.cnpj())
+                .orElseGet(() -> createSupermarket(nfceData, user));
 
         Purchase purchase = Purchase.builder()
                 .user(user)
                 .supermarket(market)
-                .accessKey(dto.accessKey())
-                .date(dto.date())
-                .totalPrice(dto.totalPrice())
+                .accessKey(nfceData.accessKey())
+                .date(nfceData.date())
+                .totalPrice(nfceData.totalPrice())
                 .manual(isManual)
                 .build();
 
@@ -159,7 +159,7 @@ public class NfceService {
         }
 
         List<Item> itemsToSave = new ArrayList<>();
-        for (ItemRequest p : dto.products()) {
+        for (ItemRequest p : nfceData.products()) {
             Catalog catalog = catalogRepo.findBySupermarketAndCode(market, p.code())
                     .orElseGet(() -> createCatalog(p, market));
 
@@ -174,6 +174,6 @@ public class NfceService {
         }
         itemRepo.saveAll(itemsToSave);
 
-        return dto;
+        return nfceData;
     }
 }
