@@ -113,8 +113,19 @@ public class NfceService {
 
     // deletar nota fiscal pela chave de acesso
     @Transactional(rollbackFor = Exception.class)
-    public void deleteNfce(String accessKey, String accessToken) {
+    public void deleteNfce(String accessToken, String accessKey) {
 
+        AuthUser user = getAuthenticatedUser(accessToken);
+
+        Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
+                .orElseThrow(() -> new RuntimeException("Nota fiscal não encontrada."));
+
+        if (!purchase.getUser().getId().equals(user.getId())) {
+            throw new UnauthorizedNfceAccessException("Você não tem permissão para editar esta nota fiscal.");
+        }
+
+        itemRepo.deleteAllByPurchase(purchase);
+        purchaseRepo.delete(purchase);
     }
 
     private Supermarket createSupermarket(NfceDataRequest nfceData, AuthUser user) {
