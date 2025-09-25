@@ -77,7 +77,7 @@ public class NfceService {
 
     @Transactional(rollbackFor = Exception.class)
     public void registerManual(String accessToken, NfceDataRequest nfceData) {
-        saveNfce(nfceData, accessToken, true);
+        saveNfce(nfceData, accessToken, false);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -121,8 +121,6 @@ public class NfceService {
         purchaseRepo.save(purchase);
     }
 
-
-
     @Transactional(rollbackFor = Exception.class)
     public void delete(String accessToken, String accessKey) {
         AuthUser user = getAuthenticatedUser(accessToken);
@@ -144,8 +142,15 @@ public class NfceService {
             throw new DuplicateNfceException("Nota fiscal já existe.");
         }
 
-        Supermarket market = supermarketRepo.findByCnpjAndManualAndCreatedByUser(nfceData.cnpj(), isManual, user)
-                .orElseGet(() -> createSupermarket(nfceData, user, isManual));
+        Supermarket market;
+
+        if(isManual) {
+            market = supermarketRepo.findByCnpjAndManualAndCreatedByUser(nfceData.cnpj(), isManual, user)
+                    .orElseGet(() -> createSupermarket(nfceData, user, true));
+        } else {
+            market = supermarketRepo.findByCnpjAndManual(nfceData.cnpj(), isManual)
+                    .orElseGet(() -> createSupermarket(nfceData, user, false));
+        }
 
         Purchase purchase = Purchase.builder()
                 .user(user)
@@ -220,7 +225,9 @@ public class NfceService {
                 .neighborhood(address.neighborhood())
                 .city(address.city())
                 .state(address.state())
-                .createdByUser(user)
+                .createdByUser(
+                        isManual ? user : null
+                )
                 .manual(isManual)
                 .build());
     }

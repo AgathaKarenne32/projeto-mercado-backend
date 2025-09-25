@@ -12,6 +12,10 @@ import java.util.List;
         name = "supermarket",
         uniqueConstraints = @UniqueConstraint(columnNames = {"cnpj", "manual", "created_by_user_id"})
 )
+@org.hibernate.annotations.Check(
+        constraints = "(manual = TRUE AND created_by_user_id IS NOT NULL) OR " +
+                "(manual = FALSE AND created_by_user_id IS NULL)"
+)
 @Getter
 @Setter
 @NoArgsConstructor
