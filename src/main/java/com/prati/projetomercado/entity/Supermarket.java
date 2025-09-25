@@ -8,7 +8,10 @@ import java.time.Instant;
 import java.util.List;
 
 @Entity
-@Table(name = "supermarket")
+@Table(
+        name = "supermarket",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"cnpj", "manual"})
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -41,4 +44,6 @@ public class Supermarket {
 
     @CreationTimestamp
     private Instant creationDate;
+
+    private boolean manual;
 }

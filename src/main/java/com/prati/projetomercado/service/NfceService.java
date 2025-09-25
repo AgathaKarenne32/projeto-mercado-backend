@@ -144,8 +144,8 @@ public class NfceService {
             throw new DuplicateNfceException("Nota fiscal já existe.");
         }
 
-        Supermarket market = supermarketRepo.findByCnpj(nfceData.cnpj())
-                .orElseGet(() -> createSupermarket(nfceData, user));
+        Supermarket market = supermarketRepo.findByCnpjAndManual(nfceData.cnpj(), isManual)
+                .orElseGet(() -> createSupermarket(nfceData, user, isManual));
 
         Purchase purchase = Purchase.builder()
                 .user(user)
@@ -209,7 +209,7 @@ public class NfceService {
         );
     }
 
-    private Supermarket createSupermarket(NfceDataRequest nfceData, AuthUser user) {
+    private Supermarket createSupermarket(NfceDataRequest nfceData, AuthUser user, boolean isManual) {
         var address = nfceData.address();
         return supermarketRepo.save(Supermarket.builder()
                 .name(nfceData.store())
@@ -221,6 +221,7 @@ public class NfceService {
                 .city(address.city())
                 .state(address.state())
                 .createdByUser(user)
+                .manual(isManual)
                 .build());
     }
 
