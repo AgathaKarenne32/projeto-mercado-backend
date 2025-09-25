@@ -11,6 +11,7 @@ import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.DuplicateNfceException;
 import com.prati.projetomercado.exceptions.EditNotAllowedException;
+import com.prati.projetomercado.exceptions.NfceNotFoundException;
 import com.prati.projetomercado.exceptions.UnauthorizedNfceAccessException;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
@@ -25,8 +26,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,26 +41,23 @@ public class NfceService {
     private final ItemRepository itemRepo;
     private final JwtTokenServiceImpl jwtTokenServiceImpl;
 
-    // cadastrar nota fiscal pelo link
     @Transactional(rollbackFor = Exception.class)
-    public NfceDataRequest registerNfceLink(String accessToken, String url) {
+    public NfceDataRequest registerLink(String accessToken, String url) {
         NfceDataRequest nfceData = scraper.getData(url);
         return saveNfce(nfceData, accessToken, false);
     }
 
-    // cadastrar nota fiscal manualmente
     @Transactional(rollbackFor = Exception.class)
-    public void registerNfceManual(String accessToken, NfceDataRequest nfceData) {
+    public void registerManual(String accessToken, NfceDataRequest nfceData) {
         saveNfce(nfceData, accessToken, true);
     }
 
-    // editar nota fiscal
     @Transactional(rollbackFor = Exception.class)
-    public void updateNfce(String accessToken, NfceDataRequest nfceData) {
+    public void edit(String accessToken, NfceDataRequest nfceData) {
         AuthUser user = getAuthenticatedUser(accessToken);
 
         Purchase purchase = purchaseRepo.findByAccessKey(nfceData.accessKey())
-                .orElseThrow(() -> new RuntimeException("Nota fiscal não encontrada."));
+                .orElseThrow(() -> new NfceNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.isManual()) {
             throw new EditNotAllowedException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
@@ -111,14 +107,13 @@ public class NfceService {
         purchaseRepo.save(purchase);
     }
 
-    // deletar nota fiscal pela chave de acesso
     @Transactional(rollbackFor = Exception.class)
-    public void deleteNfce(String accessToken, String accessKey) {
+    public void delete(String accessToken, String accessKey) {
 
         AuthUser user = getAuthenticatedUser(accessToken);
 
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
-                .orElseThrow(() -> new RuntimeException("Nota fiscal não encontrada."));
+                .orElseThrow(() -> new NfceNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.getUser().getId().equals(user.getId())) {
             throw new UnauthorizedNfceAccessException("Você não tem permissão para editar esta nota fiscal.");
