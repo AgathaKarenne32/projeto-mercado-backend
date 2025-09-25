@@ -7,9 +7,26 @@ import java.util.List;
 public record NfceDataRequest(
         String store,
         String cnpj,
-        AddressRequest address,
+        Address address,
         String accessKey,
         LocalDate date,
         BigDecimal totalPrice,
-        List<ItemRequest> products
-) {}
+        List<Item> products
+) {
+    public record Address(
+            String street,
+            String number,
+            String complement,
+            String neighborhood,
+            String city,
+            String state
+    ) {}
+
+    public record Item(
+            String name,
+            String code,
+            BigDecimal quantity,
+            String unit,
+            BigDecimal price
+    ) {}
+}

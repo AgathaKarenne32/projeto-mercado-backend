@@ -1,9 +1,7 @@
 package com.prati.projetomercado.utils;
 
 import com.prati.projetomercado.dto.request.NfceDataRequest;
-import com.prati.projetomercado.dto.request.ItemRequest;
-import com.prati.projetomercado.dto.request.AddressRequest;
-import com.prati.projetomercado.exceptions.NfceFetchException;
+import com.prati.projetomercado.exceptions.NfceScrapeException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -32,7 +30,7 @@ public class ScraperUtils {
 
         try {
             Document doc = Jsoup.connect(url).get();
-            List<ItemRequest> products = new ArrayList<>();
+            List<NfceDataRequest.Item> products = new ArrayList<>();
 
             // gets store information
             Elements storeInfo = doc.select("div#conteudo div.txtCenter > div");
@@ -42,7 +40,14 @@ public class ScraperUtils {
             // splits address information into separate fields
             String addressString = storeInfo.get(2).text();
             String[] parts = addressString.split("\\s*,\\s*");
-            AddressRequest address = new AddressRequest(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]);
+            NfceDataRequest.Address address = new NfceDataRequest.Address(
+                    parts[0], // street
+                    parts[1], // number
+                    parts[2], // complement
+                    parts[3], // neighborhood
+                    parts[4], // city
+                    parts[5]  // state
+            );
 
             // gets total price
             Element totalInfo = doc.selectFirst("div#totalNota > :nth-child(2) span");
@@ -80,16 +85,16 @@ public class ScraperUtils {
 
                 BigDecimal price = new BigDecimal(priceString);
 
-                products.add(new ItemRequest(name, code, quantity, unit, price));
+                products.add(new NfceDataRequest.Item(name, code, quantity, unit, price));
             }
 
             return new NfceDataRequest(store, cnpj, address, accessKey, date, totalPrice, products);
         } catch (IOException e) {
-            throw new NfceFetchException("Erro ao buscar dados da página");
+            throw new NfceScrapeException("Erro ao buscar dados da página");
         } catch (IllegalArgumentException e) {
-            throw new NfceFetchException ("URL inválida.");
+            throw new NfceScrapeException("URL inválida.");
         } catch (IndexOutOfBoundsException | NullPointerException e) {
-            throw new NfceFetchException("A estrutura da página está diferente do esperado.");
+            throw new NfceScrapeException("A estrutura da página está diferente do esperado.");
         }
     }
 }
