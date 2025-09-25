@@ -23,7 +23,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -57,9 +59,14 @@ public class NfceService {
 
         List<Purchase> purchases = purchaseRepo.findAllByUserId(user.getId());
 
-        return purchases.stream()
-                .map(this::createNfce)
-                .toList();
+        List<NfceDataRequest> nfceList = new ArrayList<>();
+
+        for (Purchase purchase : purchases) {
+            NfceDataRequest nfce = createNfce(purchase);
+            nfceList.add(nfce);
+        }
+
+        return nfceList;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -143,7 +150,10 @@ public class NfceService {
         Purchase purchase = Purchase.builder()
                 .user(user)
                 .supermarket(market)
-                .accessKey(nfceData.accessKey())
+                .accessKey((nfceData.accessKey() == null || nfceData.accessKey().isEmpty())
+                        ? generateAccessKey()
+                        : nfceData.accessKey()
+                )
                 .date(nfceData.date())
                 .totalPrice(nfceData.totalPrice())
                 .manual(isManual)
@@ -241,5 +251,23 @@ public class NfceService {
         var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
         return userRepo.findByEmail(email)
                 .orElseThrow(() -> new AuthException("Usuário não encontrado."));
+    }
+
+    private String generateAccessKey() {
+        Random random = new Random();
+        int TOTAL_LENGTH = 44;
+        String PREFIX = "MA";
+        String key;
+
+        do {
+            StringBuilder sb = new StringBuilder(TOTAL_LENGTH);
+            sb.append(PREFIX);
+            for (int i = 0; i < TOTAL_LENGTH - PREFIX.length(); i++) {
+                sb.append(random.nextInt(10));
+            }
+            key = sb.toString();
+        } while (purchaseRepo.findByAccessKey(key).isPresent());
+
+        return key;
     }
 }
