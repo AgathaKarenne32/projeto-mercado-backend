@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -40,7 +41,8 @@ public class Purchase {
     private BigDecimal totalPrice;
 
     @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Item> items;
+    @Builder.Default
+    private List<Item> items = new ArrayList<>();
 
     @CreationTimestamp
     private Instant creationDate;

@@ -67,32 +67,18 @@ public class NfceService {
             throw new UnauthorizedNfceAccessException("Você não tem permissão para editar esta nota fiscal.");
         }
 
-        Supermarket existingSupermarket = purchase.getSupermarket();
-        Supermarket updatedSupermarket = Supermarket.builder()
-                .id(existingSupermarket.getId())
-                .name(nfceData.store())
-                .cnpj(nfceData.cnpj())
-                .street(nfceData.address().street())
-                .number(nfceData.address().number())
-                .complement(nfceData.address().complement())
-                .neighborhood(nfceData.address().neighborhood())
-                .city(nfceData.address().city())
-                .state(nfceData.address().state())
-                .createdByUser(existingSupermarket.getCreatedByUser())
-                .creationDate(existingSupermarket.getCreationDate())
-                .build();
+        Supermarket updatedMarket = updateSupermarket(nfceData, purchase);
+        supermarketRepo.save(updatedMarket);
 
-        supermarketRepo.save(updatedSupermarket);
-
-        purchase.setSupermarket(updatedSupermarket);
+        purchase.setSupermarket(updatedMarket);
         purchase.setAccessKey(nfceData.accessKey());
         purchase.setDate(nfceData.date());
         purchase.setTotalPrice(nfceData.totalPrice());
 
         purchase.getItems().clear();
         for (ItemRequest product : nfceData.products()) {
-            Catalog catalog = catalogRepo.findBySupermarketAndCode(updatedSupermarket, product.code())
-                    .orElseGet(() -> createCatalog(product, updatedSupermarket));
+            Catalog catalog = catalogRepo.findBySupermarketAndCode(updatedMarket, product.code())
+                    .orElseGet(() -> createCatalog(product, updatedMarket));
 
             Item item = Item.builder()
                     .purchase(purchase)
@@ -107,9 +93,10 @@ public class NfceService {
         purchaseRepo.save(purchase);
     }
 
+
+
     @Transactional(rollbackFor = Exception.class)
     public void delete(String accessToken, String accessKey) {
-
         AuthUser user = getAuthenticatedUser(accessToken);
 
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
@@ -119,12 +106,11 @@ public class NfceService {
             throw new UnauthorizedNfceAccessException("Você não tem permissão para editar esta nota fiscal.");
         }
 
-        itemRepo.deleteAllByPurchase(purchase);
         purchaseRepo.delete(purchase);
     }
 
     private Supermarket createSupermarket(NfceDataRequest nfceData, AuthUser user) {
-        AddressRequest address = nfceData.address();
+        var address = nfceData.address();
         return supermarketRepo.save(Supermarket.builder()
                 .name(nfceData.store())
                 .cnpj(nfceData.cnpj())
@@ -136,6 +122,19 @@ public class NfceService {
                 .state(address.state())
                 .createdByUser(user)
                 .build());
+    }
+
+    private Supermarket updateSupermarket(NfceDataRequest nfceData, Purchase purchase) {
+        Supermarket updatedMarket = purchase.getSupermarket();
+        updatedMarket.setName(nfceData.store());
+        updatedMarket.setCnpj(nfceData.cnpj());
+        updatedMarket.setStreet(nfceData.address().street());
+        updatedMarket.setNumber(nfceData.address().number());
+        updatedMarket.setComplement(nfceData.address().complement());
+        updatedMarket.setNeighborhood(nfceData.address().neighborhood());
+        updatedMarket.setCity(nfceData.address().city());
+        updatedMarket.setState(nfceData.address().state());
+        return updatedMarket;
     }
 
     private Catalog createCatalog(ItemRequest p, Supermarket market) {
@@ -155,11 +154,14 @@ public class NfceService {
     }
 
     private NfceDataRequest saveNfce(NfceDataRequest nfceData, String accessToken, boolean isManual) {
-
         AuthUser user = getAuthenticatedUser(accessToken);
 
         Supermarket market = supermarketRepo.findByCnpj(nfceData.cnpj())
                 .orElseGet(() -> createSupermarket(nfceData, user));
+
+        if (purchaseRepo.findByAccessKey(nfceData.accessKey()).isPresent()) {
+            throw new DuplicateNfceException("Nota fiscal já existe.");
+        }
 
         Purchase purchase = Purchase.builder()
                 .user(user)
@@ -170,28 +172,21 @@ public class NfceService {
                 .manual(isManual)
                 .build();
 
-        try {
-            purchase = purchaseRepo.save(purchase);
-        } catch (DataIntegrityViolationException e) {
-            throw new DuplicateNfceException("Nota fiscal já existe.");
-        }
-
-        List<Item> itemsToSave = new ArrayList<>();
-        for (ItemRequest p : nfceData.products()) {
-            Catalog catalog = catalogRepo.findBySupermarketAndCode(market, p.code())
-                    .orElseGet(() -> createCatalog(p, market));
+        for (ItemRequest product : nfceData.products()) {
+            Catalog catalog = catalogRepo.findBySupermarketAndCode(market, product.code())
+                    .orElseGet(() -> createCatalog(product, market));
 
             Item item = Item.builder()
                     .purchase(purchase)
                     .catalog(catalog)
-                    .quantity(p.quantity())
-                    .unitPrice(p.price())
+                    .quantity(product.quantity())
+                    .unitPrice(product.price())
                     .build();
 
-            itemsToSave.add(item);
+            purchase.getItems().add(item);
         }
-        itemRepo.saveAll(itemsToSave);
 
+        purchaseRepo.save(purchase);
         return nfceData;
     }
 }
