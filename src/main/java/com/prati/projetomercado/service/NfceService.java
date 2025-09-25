@@ -50,7 +50,7 @@ public class NfceService {
             throw new UnauthorizedNfceAccessException("Você não tem permissão para acessar esta nota fiscal.");
         }
 
-        return createNfce(purchase);
+        return createNfceRequest(purchase);
     }
 
     @Transactional(readOnly = true)
@@ -62,7 +62,7 @@ public class NfceService {
         List<NfceDataRequest> nfceList = new ArrayList<>();
 
         for (Purchase purchase : purchases) {
-            NfceDataRequest nfce = createNfce(purchase);
+            NfceDataRequest nfce = createNfceRequest(purchase);
             nfceList.add(nfce);
         }
 
@@ -144,7 +144,7 @@ public class NfceService {
             throw new DuplicateNfceException("Nota fiscal já existe.");
         }
 
-        Supermarket market = supermarketRepo.findByCnpjAndManual(nfceData.cnpj(), isManual)
+        Supermarket market = supermarketRepo.findByCnpjAndManualAndCreatedByUser(nfceData.cnpj(), isManual, user)
                 .orElseGet(() -> createSupermarket(nfceData, user, isManual));
 
         Purchase purchase = Purchase.builder()
@@ -177,7 +177,7 @@ public class NfceService {
         return nfceData;
     }
 
-    private NfceDataRequest createNfce(Purchase purchase) {
+    private NfceDataRequest createNfceRequest(Purchase purchase) {
         Supermarket supermarket = purchase.getSupermarket();
         NfceDataRequest.Address address = new NfceDataRequest.Address(
                 supermarket.getStreet(),
