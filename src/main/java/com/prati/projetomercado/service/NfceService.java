@@ -78,7 +78,7 @@ public class NfceService {
 
     @Transactional(rollbackFor = Exception.class)
     public void registerManual(String accessToken, NfceDataRequest nfceData) {
-        saveNfce(nfceData, accessToken, false);
+        saveNfce(nfceData, accessToken, true);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -145,7 +145,7 @@ public class NfceService {
 
         Supermarket market;
 
-        if(isManual) {
+        if (isManual) {
             market = supermarketRepo.findByCnpjAndManualAndCreatedByUser(nfceData.cnpj(), isManual, user)
                     .orElseGet(() -> createSupermarket(nfceData, user, true));
         } else {
@@ -157,7 +157,7 @@ public class NfceService {
                 .user(user)
                 .supermarket(market)
                 .accessKey((nfceData.accessKey() == null || nfceData.accessKey().isEmpty())
-                        ? generateAccessKey(): nfceData.accessKey()
+                        ? generateAccessKey() : nfceData.accessKey()
                 )
                 .date(nfceData.date())
                 .totalPrice(nfceData.totalPrice())
@@ -254,11 +254,11 @@ public class NfceService {
 
     private Catalog createCatalog(NfceDataRequest.Item p, Supermarket market) {
         return catalogRepo.save(Catalog.builder()
-                        .supermarket(market)
-                        .code(p.code())
-                        .name(p.name())
-                        .unit(p.unit())
-                        .build());
+                .supermarket(market)
+                .code(p.code())
+                .name(p.name())
+                .unit(p.unit())
+                .build());
     }
 
     private AuthUser getAuthenticatedUser(String accessToken) {
