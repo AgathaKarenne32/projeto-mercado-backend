@@ -28,6 +28,7 @@ public class Item {
     @JoinColumn(name = "catalog_id")
     private Catalog catalog;
 
+    @Column(precision = 10, scale = 3)
     private BigDecimal quantity;
 
     @Column(name = "unit_price")
