@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -156,8 +157,7 @@ public class NfceService {
                 .user(user)
                 .supermarket(market)
                 .accessKey((nfceData.accessKey() == null || nfceData.accessKey().isEmpty())
-                        ? generateAccessKey()
-                        : nfceData.accessKey()
+                        ? generateAccessKey(): nfceData.accessKey()
                 )
                 .date(nfceData.date())
                 .totalPrice(nfceData.totalPrice())
@@ -168,14 +168,23 @@ public class NfceService {
             Catalog catalog = catalogRepo.findBySupermarketAndCode(market, product.code())
                     .orElseGet(() -> createCatalog(product, market));
 
-            Item item = Item.builder()
-                    .purchase(purchase)
-                    .catalog(catalog)
-                    .quantity(product.quantity())
-                    .unitPrice(product.price())
-                    .build();
+            Optional<Item> existingItem = purchase.getItems().stream()
+                    .filter(i -> i.getCatalog().getCode().equals(product.code()))
+                    .findFirst();
 
-            purchase.getItems().add(item);
+            if (existingItem.isPresent()) {
+                Item item = existingItem.get();
+                item.setQuantity(item.getQuantity().add(product.quantity()));
+            } else {
+                Item item = Item.builder()
+                        .purchase(purchase)
+                        .catalog(catalog)
+                        .quantity(product.quantity())
+                        .unitPrice(product.price())
+                        .build();
+
+                purchase.getItems().add(item);
+            }
         }
 
         purchaseRepo.save(purchase);
@@ -225,9 +234,7 @@ public class NfceService {
                 .neighborhood(address.neighborhood())
                 .city(address.city())
                 .state(address.state())
-                .createdByUser(
-                        isManual ? user : null
-                )
+                .createdByUser(isManual ? user : null)
                 .manual(isManual)
                 .build());
     }
@@ -246,13 +253,12 @@ public class NfceService {
     }
 
     private Catalog createCatalog(NfceDataRequest.Item p, Supermarket market) {
-        return catalogRepo.findBySupermarketAndCode(market, p.code())
-                .orElseGet(() -> catalogRepo.save(Catalog.builder()
+        return catalogRepo.save(Catalog.builder()
                         .supermarket(market)
                         .code(p.code())
                         .name(p.name())
                         .unit(p.unit())
-                        .build()));
+                        .build());
     }
 
     private AuthUser getAuthenticatedUser(String accessToken) {
