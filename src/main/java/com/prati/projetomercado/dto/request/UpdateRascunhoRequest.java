@@ -1,7 +1,7 @@
 package com.prati.projetomercado.dto.request;
 
 public record UpdateRascunhoRequest(
-        String titulo,
+        String mercado,
         String conteudo
 ) {
 }

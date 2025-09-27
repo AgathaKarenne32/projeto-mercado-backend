@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public record RascunhoResponse(
         Long id,
-        String titulo,
+        String mercado,
         String conteudo,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,

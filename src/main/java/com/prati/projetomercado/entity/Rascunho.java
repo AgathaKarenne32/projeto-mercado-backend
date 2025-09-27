@@ -25,7 +25,7 @@ public class Rascunho {
     private Long id;
 
     @Column(nullable = false) // Garante que o título não pode ser nulo no banco
-    private String titulo;
+    private String mercado;
 
     @Lob // Indica que este campo pode armazenar um grande volume de dados
     @Column(columnDefinition = "TEXT", nullable = false) // Define o tipo da coluna como TEXT e não permite nulo

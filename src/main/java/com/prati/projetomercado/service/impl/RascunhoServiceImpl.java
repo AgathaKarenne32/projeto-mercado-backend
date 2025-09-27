@@ -25,7 +25,7 @@ public class RascunhoServiceImpl implements RascunhoService {
     private RascunhoResponse paraRascunhoResponse(Rascunho rascunho) {
         return new RascunhoResponse(
                 rascunho.getId(),
-                rascunho.getTitulo(),
+                rascunho.getMercado(),
                 rascunho.getConteudo(),
                 rascunho.getCreatedAt(),
                 rascunho.getUpdatedAt(),
@@ -44,7 +44,7 @@ public class RascunhoServiceImpl implements RascunhoService {
     public RascunhoResponse criarRascunho(CreateRascunhoRequest createRascunhoRequest) {
         AuthUser usuarioLogado = getUsuarioAutenticado();
         Rascunho novoRascunho = Rascunho.builder()
-                .titulo(createRascunhoRequest.titulo())
+                .mercado(createRascunhoRequest.mercado())
                 .conteudo(createRascunhoRequest.conteudo())
                 .user(usuarioLogado)
                 .build();
@@ -72,7 +72,7 @@ public class RascunhoServiceImpl implements RascunhoService {
     public RascunhoResponse atualizarRascunho(Long rascunhoId, UpdateRascunhoRequest updateRascunhoRequest) {
         Rascunho rascunhoExistente = rascunhoRepository.findById(rascunhoId)
                 .orElseThrow(() -> new RuntimeException("Rascunho não encontrado"));
-        rascunhoExistente.setTitulo(updateRascunhoRequest.titulo());
+        rascunhoExistente.setMercado(updateRascunhoRequest.mercado());
         rascunhoExistente.setConteudo(updateRascunhoRequest.conteudo());
         Rascunho rascunhoAtualizado = rascunhoRepository.save(rascunhoExistente);
         return paraRascunhoResponse(rascunhoAtualizado);

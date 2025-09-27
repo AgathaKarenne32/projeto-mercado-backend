@@ -10,6 +10,12 @@ import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.service.UserService;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.utils.TokenUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +25,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "Autenticação", description = "Endpoints para registro, login e gerenciamento de tokens")
 public class AuthController {
 
     private final JwtTokenServiceImpl jwtTokenServiceImpl;
@@ -60,24 +67,48 @@ public class AuthController {
        
     }
 
-    //adicionando logout
+    @Operation(summary = "Realiza o logout do usuário", description = "Invalida o token de acesso (JWT) atual do usuário.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Logout realizado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(@RequestHeader("Authorization") String authorization) {
+    public ResponseEntity<String> logout(
+            @Parameter(hidden = true) // o authorization não precisa ser realizado aqui se ele já ocorre apos o login
+            @RequestHeader("Authorization") String authorization) {
         String token = TokenUtils.recoveryToken(authorization);
-        jwtTokenServiceImpl.invalidateToken(token); // você precisa implementar isso
+        jwtTokenServiceImpl.invalidateToken(token);
         return ResponseEntity.ok("Logout realizado com sucesso!");
     }
 
-
-
+    @Operation(summary = "Atualiza o token de acesso", description = "Gera um novo token de acesso (JWT) usando um refresh token válido. O accessToken antigo e expirado deve ser enviado no cabeçalho de autorização.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token atualizado com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Refresh token inválido ou expirado")
+    })
+    @SecurityRequirement(name = "bearerAuth") // Diz ao Swagger para usar a segurança que configuramos
     @PostMapping("/refresh-token")
-    public ResponseEntity<JwtToken> refresh(@RequestHeader String Authorization, @RequestBody RefreshTokenRequest refreshToken) throws Exception {
+    public ResponseEntity<JwtToken> refresh(
+            @Parameter(hidden = true) // <-- ESTA É A MÁGICA!
+            @RequestHeader String Authorization,
+            @RequestBody RefreshTokenRequest refreshToken) throws Exception {
+
         var newJwtToken = userService.useRefreshToken(TokenUtils.recoveryToken(Authorization), UUID.fromString(refreshToken.refreshToken()));
         return new ResponseEntity<>(newJwtToken, HttpStatus.OK);
     }
 
+    @Operation(summary = "Endpoint de teste de autenticação", description = "Verifica se o token de acesso fornecido é válido.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token válido e autenticado"),
+            @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/test-autenticated")
-    public ResponseEntity<String> test(@RequestHeader String Authorization, @RequestBody String alow) throws Exception {
+    public ResponseEntity<String> test(
+            @Parameter(hidden = true) // authorization não é necessario
+            @RequestHeader String Authorization,
+            @RequestBody String alow) throws Exception {
         return new ResponseEntity<>("ok", HttpStatus.OK);
     }
 
