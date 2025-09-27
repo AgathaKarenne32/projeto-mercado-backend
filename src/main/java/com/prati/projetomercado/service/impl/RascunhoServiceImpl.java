@@ -28,9 +28,7 @@ public class RascunhoServiceImpl implements RascunhoService {
                 rascunho.getMercado(),
                 rascunho.getConteudo(),
                 rascunho.getCreatedAt(),
-                rascunho.getUpdatedAt(),
-                rascunho.getUser().getId(),
-                rascunho.getUser().getUsername()
+                rascunho.getUpdatedAt()
         );
     }
 

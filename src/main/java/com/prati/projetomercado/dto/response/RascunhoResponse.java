@@ -7,8 +7,6 @@ public record RascunhoResponse(
         String mercado,
         String conteudo,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt,
-        Long userId,
-        String username
+        LocalDateTime updatedAt
 ) {
 }
