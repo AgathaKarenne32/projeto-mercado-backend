@@ -96,18 +96,29 @@ public class NfceService {
             throw new UnauthorizedNfceAccessException("Você não tem permissão para acessar esta nota fiscal.");
         }
 
-        Supermarket updatedMarket = updateSupermarket(nfceData, purchase);
-        supermarketRepo.save(updatedMarket);
+        Optional<Supermarket> existingMarket = supermarketRepo.findByCnpjAndManualAndCreatedByUser(nfceData.cnpj(),
+                true, user);
 
-        purchase.setSupermarket(updatedMarket);
+        if (existingMarket.isPresent()) {
+            Supermarket market = existingMarket.get();
+            Supermarket purchaseMarket = purchase.getSupermarket();
+            if (!market.getId().equals(purchaseMarket.getId())) {
+                purchase.setSupermarket(market);
+            }
+        }
+
+        updateSupermarket(nfceData, purchase);
+        supermarketRepo.save(purchase.getSupermarket());
+
+        purchase.setSupermarket(purchase.getSupermarket());
         purchase.setAccessKey(nfceData.accessKey());
         purchase.setDate(nfceData.date());
         purchase.setTotalPrice(nfceData.totalPrice());
 
         purchase.getItems().clear();
         for (NfceDataRequest.Item product : nfceData.products()) {
-            Catalog catalog = catalogRepo.findBySupermarketAndCode(updatedMarket, product.code())
-                    .orElseGet(() -> createCatalog(product, updatedMarket));
+            Catalog catalog = catalogRepo.findBySupermarketAndCode(purchase.getSupermarket(), product.code())
+                    .orElseGet(() -> createCatalog(product, purchase.getSupermarket()));
 
             Item item = Item.builder()
                     .purchase(purchase)
@@ -239,17 +250,16 @@ public class NfceService {
                 .build());
     }
 
-    private Supermarket updateSupermarket(NfceDataRequest nfceData, Purchase purchase) {
-        Supermarket updatedMarket = purchase.getSupermarket();
-        updatedMarket.setName(nfceData.store());
-        updatedMarket.setCnpj(nfceData.cnpj());
-        updatedMarket.setStreet(nfceData.address().street());
-        updatedMarket.setNumber(nfceData.address().number());
-        updatedMarket.setComplement(nfceData.address().complement());
-        updatedMarket.setNeighborhood(nfceData.address().neighborhood());
-        updatedMarket.setCity(nfceData.address().city());
-        updatedMarket.setState(nfceData.address().state());
-        return updatedMarket;
+    private void updateSupermarket(NfceDataRequest nfceData, Purchase purchase) {
+        Supermarket market = purchase.getSupermarket();
+        market.setName(nfceData.store());
+        market.setCnpj(nfceData.cnpj());
+        market.setStreet(nfceData.address().street());
+        market.setNumber(nfceData.address().number());
+        market.setComplement(nfceData.address().complement());
+        market.setNeighborhood(nfceData.address().neighborhood());
+        market.setCity(nfceData.address().city());
+        market.setState(nfceData.address().state());
     }
 
     private Catalog createCatalog(NfceDataRequest.Item p, Supermarket market) {
