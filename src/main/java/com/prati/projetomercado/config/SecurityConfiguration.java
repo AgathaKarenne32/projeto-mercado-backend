@@ -43,7 +43,8 @@ public class SecurityConfiguration {
             "/oauth2/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
-            "/v3/api-docs/**"
+            "/v3/api-docs/**",
+            "/auth/confirm-registration"
     };
 
     public static final String[] AUTH_REQUIRED_ENDPOINTS = {
@@ -74,7 +75,7 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(userAutenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .oauth2Login(configurer -> configurer

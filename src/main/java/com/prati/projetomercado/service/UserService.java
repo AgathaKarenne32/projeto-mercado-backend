@@ -29,4 +29,6 @@ public interface UserService {
      * @param request DTO contendo a senha atual, a nova senha e a confirmação.
      */
     void changePassword(ChangePasswordRequest request);
+
+    void confirmUser(String token);
 }

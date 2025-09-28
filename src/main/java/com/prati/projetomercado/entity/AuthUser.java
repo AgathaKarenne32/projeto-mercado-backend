@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +35,18 @@ public class AuthUser {
 
     @CreationTimestamp
     private Instant creationDate;
+
+    // @Builder.Default garante que, ao criar um usuário, este campo comece como 'false'.
+    @Builder.Default
+    private boolean enabled = false;
+
+    // Campo para guardar o token de confirmação de e-mail que será enviado ao usuário.
+    @Column(name = "confirmation_token")
+    private String confirmationToken;
+
+    // Campo para guardar a data de expiração do token de confirmação.
+    @Column(name = "confirmation_token_expiry")
+    private LocalDateTime confirmationTokenExpiry;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
     @JoinTable(name = "user_roles",

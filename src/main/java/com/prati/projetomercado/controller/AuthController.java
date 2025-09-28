@@ -5,14 +5,19 @@ import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
 import com.prati.projetomercado.dto.response.ErrorResponse;
+import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.service.UserService;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.utils.TokenUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
 
@@ -81,5 +86,20 @@ public class AuthController {
         return new ResponseEntity<>("ok", HttpStatus.OK);
     }
 
+
+    @GetMapping("/confirm-registration")
+    @Operation(summary = "Confirma o registro de um novo usuário", description = "Endpoint ativado pelo link enviado ao e-mail do usuário para validar a conta.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Conta ativada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Token inválido ou expirado")
+    })
+    public ResponseEntity<String> confirmRegistration(@RequestParam("token") String token) {
+        try {
+            userService.confirmUser(token);
+            return ResponseEntity.ok("Conta ativada com sucesso! Você já pode fazer o login.");
+        } catch (AuthException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
 }

@@ -12,6 +12,7 @@ import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.repository.AccessTokenRepository;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.RefreshTokenRepository;
+import com.prati.projetomercado.service.EmailService;
 import com.prati.projetomercado.service.UserService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,9 +23,11 @@ import com.prati.projetomercado.dto.response.UserResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import com.prati.projetomercado.dto.request.ChangePasswordRequest;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,14 +41,16 @@ public class UserServiceImpl implements UserService {
     private PasswordEncoder encoder;
     private RefreshTokenRepository refreshTokenRepository;
     private AccessTokenRepository accessTokenRepository;
+    private final EmailService emailService;
 
-    public UserServiceImpl(AuthenticationManager authenticationManager, AuthUserRepository userRepository, JwtTokenServiceImpl jwtTokenService, PasswordEncoder encoder, RefreshTokenRepository refreshTokenRepository, AccessTokenRepository accessTokenRepository) {
+    public UserServiceImpl(AuthenticationManager authenticationManager, AuthUserRepository userRepository, JwtTokenServiceImpl jwtTokenService, PasswordEncoder encoder, RefreshTokenRepository refreshTokenRepository, AccessTokenRepository accessTokenRepository, EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.jwtTokenService = jwtTokenService;
         this.encoder = encoder;
         this.refreshTokenRepository = refreshTokenRepository;
         this.accessTokenRepository = accessTokenRepository;
+        this.emailService = emailService;
     }
 
     @Override
@@ -53,12 +58,27 @@ public class UserServiceImpl implements UserService {
         if (!createUserRequest.password().equals(createUserRequest.confirmPassword())) {
             throw new BadCredentialsException(
                     List.of(new FieldError("confirmPassword", "Passwords don't match"), new FieldError("password", "Passwords don't match")));
+
         }
 
-        if (createUserRequest.password().length() < 6) throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 6 characters")));
+        if (createUserRequest.password().length() < 8) { // Ajustado para 8, conforme seu controller
+            throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 8 characters")));
+        }
+        String confirmationToken = UUID.randomUUID().toString(); // Gera um token aleatório
 
-        var newUser = AuthUser.builder().email(createUserRequest.email()).username(createUserRequest.username()).password(encoder.encode(createUserRequest.password())).build();
-        userRepository.save(newUser);
+        AuthUser newUser = AuthUser.builder()
+                .email(createUserRequest.email())
+                .username(createUserRequest.username())
+                .password(encoder.encode(createUserRequest.password()))
+                .enabled(false) // O usuário começa desativado
+                .confirmationToken(confirmationToken) // Salva o token de confirmação
+                .confirmationTokenExpiry(LocalDateTime.now().plusHours(24)) // Token expira em 24 horas
+                .build();
+
+        AuthUser savedUser = userRepository.save(newUser);
+
+        // Envia o e-mail de confirmação
+        emailService.sendConfirmationEmail(savedUser);
     }
 
     @Override
@@ -73,8 +93,14 @@ public class UserServiceImpl implements UserService {
         }
 
         var userDetailsImpl = (UserDetailsImpl) authentication.getPrincipal();
+        var user = userDetailsImpl.getAuthUser();
 
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(userDetailsImpl.getAuthUser());
+        if (!user.isEnabled()) {
+            // Se o usuário não estiver ativo, lança uma exceção e impede o login.
+            throw new AuthException("Por favor, confirme seu e-mail para ativar sua conta.");
+        }
+
+        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(user);
 
         if (accessTokenEntityOld != null) {
             accessTokenRepository.delete(accessTokenEntityOld);
@@ -176,5 +202,28 @@ public class UserServiceImpl implements UserService {
 
         // 6. Salva o usuário com a nova senha no banco de dados.
         userRepository.save(currentUser);
+    }
+
+    @Override
+    @Transactional
+    public void confirmUser(String token) {
+        // 1. Busca o usuário pelo token de confirmação
+        AuthUser user = userRepository.findByConfirmationToken(token)
+                .orElseThrow(() -> new AuthException("Token de confirmação inválido ou não encontrado."));
+
+        // 2. Verifica se o token já expirou
+        if (user.getConfirmationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new AuthException("Token de confirmação expirado.");
+        }
+
+        // 3. Ativa o usuário
+        user.setEnabled(true);
+
+        // 4. Limpa o token para que não possa ser usado novamente (segurança)
+        user.setConfirmationToken(null);
+        user.setConfirmationTokenExpiry(null);
+
+        // 5. Salva as alterações no banco de dados
+        userRepository.save(user);
     }
 }
