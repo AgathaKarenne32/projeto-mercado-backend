@@ -7,6 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface SupermarketRepository extends JpaRepository<Supermarket, Long> {
-    Optional<Supermarket> findByCnpjAndManual(String cnpj, boolean manual);
-    Optional<Supermarket> findByCnpjAndManualAndCreatedByUser(String cnpj, boolean manual, AuthUser createdByUser);
+    Optional<Supermarket> findByCnpjAndCreatedByUser(String cnpj, AuthUser createdByUser);
 }

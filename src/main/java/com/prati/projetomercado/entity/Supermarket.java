@@ -1,7 +1,19 @@
 package com.prati.projetomercado.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
@@ -10,11 +22,7 @@ import java.util.List;
 @Entity
 @Table(
         name = "supermarket",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"cnpj", "manual", "created_by_user_id"})
-)
-@org.hibernate.annotations.Check(
-        constraints = "(manual = TRUE AND created_by_user_id IS NOT NULL) OR " +
-                "(manual = FALSE AND created_by_user_id IS NULL)"
+        uniqueConstraints = @UniqueConstraint(columnNames = {"cnpj", "created_by_user_id"})
 )
 @Getter
 @Setter
@@ -48,6 +56,4 @@ public class Supermarket {
 
     @CreationTimestamp
     private Instant creationDate;
-
-    private boolean manual;
 }
