@@ -56,6 +56,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private AuthUser registerNewUser(OAuth2UserInfo oAuth2UserInfo) {
         AuthUser authUser = AuthUser.builder()
                 .email(oAuth2UserInfo.getEmail())
+                .username(oAuth2UserInfo.getName())
                 .creationDate(Instant.now())
                 .build();
 
