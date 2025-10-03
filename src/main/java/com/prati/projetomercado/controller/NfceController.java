@@ -3,6 +3,14 @@ package com.prati.projetomercado.controller;
 import com.prati.projetomercado.dto.request.NfceDataRequest;
 import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.service.nfce.NfceService;
+import com.prati.projetomercado.utils.ScraperUtils.NfceData;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -22,6 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/nfce")
 @RequiredArgsConstructor
+@Tag(name = "NFC-e", description = "Endpoints para processamento de Notas Fiscais de Consumidor Eletrônicas") // NOVO
 public class NfceController {
     
     private final NfceService nfceService;

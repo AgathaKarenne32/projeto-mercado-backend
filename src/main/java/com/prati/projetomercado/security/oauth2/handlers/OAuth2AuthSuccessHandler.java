@@ -1,21 +1,19 @@
 package com.prati.projetomercado.security.oauth2.handlers;
 
 import com.prati.projetomercado.config.UserDetailsImpl;
-import com.prati.projetomercado.entity.AuthUser;
+import com.prati.projetomercado.entity.AccessToken;
 import com.prati.projetomercado.entity.RefreshToken;
+import com.prati.projetomercado.repository.AccessTokenRepository;
 import com.prati.projetomercado.repository.RefreshTokenRepository;
 import com.prati.projetomercado.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
-import com.prati.projetomercado.service.impl.UserServiceImpl;
 import com.prati.projetomercado.utils.CookieUtils;
-import com.prati.projetomercado.utils.TokenUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.SneakyThrows;
 import org.apache.coyote.BadRequestException;
-import org.hibernate.query.sqm.TemporalUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -37,6 +35,9 @@ public class OAuth2AuthSuccessHandler extends SimpleUrlAuthenticationSuccessHand
     private HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
+    private AccessTokenRepository accessTokenRepository;
 
 
     @Override
@@ -67,7 +68,16 @@ public class OAuth2AuthSuccessHandler extends SimpleUrlAuthenticationSuccessHand
         String targetUri = redirectUri.orElse(getDefaultTargetUrl());
 
         var authUser = ((UserDetailsImpl) authentication.getPrincipal()).getAuthUser();
-        String accessToken= tokenService.generateToken(authUser, Instant.now().plus(1, ChronoUnit.DAYS));
+        var expiredDate = Instant.now().plus(1, ChronoUnit.DAYS);
+        String accessToken = tokenService.generateToken(authUser, expiredDate);
+        var accessTokenEntity = AccessToken.builder()
+                .token(accessToken)
+                .authUser(authUser)
+                .expiredDate(expiredDate)
+                .build();
+
+        accessTokenRepository.save(accessTokenEntity);
+
         RefreshToken refreshToken= tokenService.generateNewRefreshToken(authUser);
         refreshTokenRepository.save(refreshToken);
 
