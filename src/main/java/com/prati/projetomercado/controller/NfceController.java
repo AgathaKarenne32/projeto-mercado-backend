@@ -3,7 +3,6 @@ package com.prati.projetomercado.controller;
 import com.prati.projetomercado.dto.request.NfceDataRequest;
 import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.service.nfce.NfceService;
-import com.prati.projetomercado.utils.ScraperUtils.NfceData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -92,3 +91,4 @@ public class NfceController {
         private String accessKey;
     }
 }
+
