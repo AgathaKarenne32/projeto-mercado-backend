@@ -1,7 +1,7 @@
 package com.prati.projetomercado.utils;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import com.prati.projetomercado.dto.request.NfceDataRequest;
+import com.prati.projetomercado.exceptions.NfceScrapeException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -9,6 +9,7 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -18,39 +19,6 @@ import java.util.regex.Pattern;
 
 @Component
 public class ScraperUtils {
-    @Getter
-    @AllArgsConstructor
-    public static class NfceData {
-        private String store;
-        private String cnpj;
-        private Address address;
-        private String accessKey;
-        private LocalDate date;
-        private double totalPrice;
-        private List<Product> products;
-
-    }
-
-    @Getter
-    @AllArgsConstructor
-    public static class Product {
-        private String name;
-        private String code;
-        private Double quantity;
-        private String unit;
-        private double price;
-    }
-
-    @Getter
-    @AllArgsConstructor
-    public static class Address {
-        private String street;
-        private String number;
-        private String complement;
-        private String neighborhood;
-        private String city;
-        private String state;
-    }
 
     private LocalDate extractDate(String text) {
         Matcher m = Pattern.compile("Emissão:\\s*(\\d{2}/\\d{2}/\\d{4})").matcher(text);
@@ -58,51 +26,75 @@ public class ScraperUtils {
         return LocalDate.parse(dateString, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
-    public NfceData getData(String url) throws IOException {
+    public NfceDataRequest getData(String url) {
 
-        Document doc = Jsoup.connect(url).get();
-        List<Product> products = new ArrayList<>();
+        try {
+            Document doc = Jsoup.connect(url).get();
+            List<NfceDataRequest.Item> products = new ArrayList<>();
 
-        // gets store information
-        Elements storeInfo = doc.select("div#conteudo div.txtCenter > div");
-        String store = storeInfo.get(0).text();
-        String cnpj = storeInfo.get(1).text().replaceFirst("CNPJ:\\s*", "");
+            // gets store information
+            Elements storeInfo = doc.select("div#conteudo div.txtCenter > div");
+            String store = storeInfo.get(0).text();
+            String cnpj = storeInfo.get(1).text().replaceFirst("CNPJ:\\s*", "");
 
-        // splits address information into separate fields
-        String addressString = storeInfo.get(2).text();
-        String[] parts = addressString.split("\\s*,\\s*");
-        Address address = new Address(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]);
+            // splits address information into separate fields
+            String addressString = storeInfo.get(2).text();
+            String[] parts = addressString.split("\\s*,\\s*");
+            NfceDataRequest.Address address = new NfceDataRequest.Address(
+                    parts[0], // street
+                    parts[1], // number
+                    parts[2], // complement
+                    parts[3], // neighborhood
+                    parts[4], // city
+                    parts[5]  // state
+            );
 
-        // gets total price
-        Element totalInfo = doc.selectFirst("div#totalNota > :nth-child(2) span");
-        double totalPrice = Double.parseDouble(totalInfo.text().replace(",", "."));
+            // gets total price
+            Element totalInfo = doc.selectFirst("div#totalNota > :nth-child(2) span");
+            String totalPriceString = totalInfo.text().replace(",", ".");
+            BigDecimal totalPrice = new BigDecimal(totalPriceString);
 
-        // gets access key
-        Element keyInfo = doc.selectFirst("div#infos span.chave");
-        String accessKey = keyInfo.text().trim().replace(" ", "");
+            // gets access key
+            Element keyInfo = doc.selectFirst("div#infos span.chave");
+            String accessKey = keyInfo.text().trim().replace(" ", "");
 
-        // gets NFC-e number, series and issue date. Then extracts date
-        Element generalInfo = doc.selectFirst("div#infos > div ul li");
-        String fullText = generalInfo.text();
-        LocalDate date = extractDate(fullText);
+            // gets NFC-e number, series and issue date. Then extracts date
+            Element generalInfo = doc.selectFirst("div#infos > div ul li");
+            String fullText = generalInfo.text();
+            LocalDate date = extractDate(fullText);
 
-        // gets all products information
-        Elements rows = doc.select("table tbody tr");
-        for (Element row : rows) {
-            Elements spans = row.select("td span");
+            // gets all products information
+            Elements rows = doc.select("table tbody tr");
+            for (Element row : rows) {
+                Elements spans = row.select("td span");
 
-            String name = spans.get(0).text();
-            String code = spans.get(1).text().replaceAll("\\D+", "").trim();
-            String quantityStr = spans.get(2).text(); // "Qtde.: 1"
-            quantityStr = quantityStr.replace("Qtde.:", "").trim().replace(",", ".");
-            Double quantity = Double.parseDouble(quantityStr);
+                String name = spans.get(0).text();
+                String code = spans.get(1).text().replaceAll("\\D+", "").trim();
 
-            String unit = spans.get(3).text().split(":")[1].trim();
-            double price = Double.parseDouble(spans.get(4).text().replaceAll("[^\\d,]", "").replace(",", "."));
+                String quantityString = spans.get(2).text()
+                        .replace("Qtde.:", "")
+                        .trim()
+                        .replace(",", ".");
+                BigDecimal quantity = new BigDecimal(quantityString);
 
-            products.add(new Product(name, code, quantity, unit, price));
+                String unit = spans.get(3).text().split(":")[1].trim();
+
+                String priceString = spans.get(4).text()
+                        .replaceAll("[^\\d,]", "")
+                        .replace(",", ".");
+
+                BigDecimal price = new BigDecimal(priceString);
+
+                products.add(new NfceDataRequest.Item(name, code, quantity, unit, price));
+            }
+
+            return new NfceDataRequest(store, cnpj, address, accessKey, date, totalPrice, products);
+        } catch (IOException e) {
+            throw new NfceScrapeException("Erro ao buscar dados da página");
+        } catch (IllegalArgumentException e) {
+            throw new NfceScrapeException("URL inválida.");
+        } catch (IndexOutOfBoundsException | NullPointerException e) {
+            throw new NfceScrapeException("A estrutura da página está diferente do esperado.");
         }
-
-        return new NfceData(store, cnpj, address, accessKey, date, totalPrice, products);
     }
 }

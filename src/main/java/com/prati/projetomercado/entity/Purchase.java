@@ -2,8 +2,12 @@ package com.prati.projetomercado.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -34,8 +38,15 @@ public class Purchase {
     private LocalDate date;
 
     @Column(name = "total_price")
-    private Double totalPrice;
+    private BigDecimal totalPrice;
 
-    @OneToMany(mappedBy = "purchase")
-    private List<Item> items;
+    @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Item> items = new ArrayList<>();
+
+    @CreationTimestamp
+    private Instant creationDate;
+
+    @Column(name = "manual", nullable = false)
+    private boolean manual;
 }
