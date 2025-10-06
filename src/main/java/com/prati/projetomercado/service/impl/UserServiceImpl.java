@@ -52,7 +52,8 @@ public class UserServiceImpl implements UserService {
                     List.of(new FieldError("confirmPassword", "Passwords don't match"), new FieldError("password", "Passwords don't match")));
         }
 
-        if (createUserRequest.password().length() < 6) throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 6 characters")));
+        if (createUserRequest.password().length() < 6)
+            throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 6 characters")));
 
         var newUser = AuthUser.builder().email(createUserRequest.email()).username(createUserRequest.username()).password(encoder.encode(createUserRequest.password())).build();
         userRepository.save(newUser);
@@ -70,12 +71,6 @@ public class UserServiceImpl implements UserService {
         }
 
         var userDetailsImpl = (UserDetailsImpl) authentication.getPrincipal();
-
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(userDetailsImpl.getAuthUser());
-
-        if (accessTokenEntityOld != null) {
-            accessTokenRepository.delete(accessTokenEntityOld);
-        }
 
         var refreshToken = jwtTokenService.generateNewRefreshToken(userDetailsImpl.getAuthUser());
 
@@ -110,17 +105,16 @@ public class UserServiceImpl implements UserService {
         refreshTokenRepository.save(refreshToken);
 
         var authuser = getAuthUser(accessToken).orElseThrow(() -> new AuthException("user not found"));
+        var accessTokenEntityOld = accessTokenRepository.findByAuthUserAndToken(authuser, accessToken);
+        accessTokenEntityOld.ifPresent(accessTokenEntity -> {
+            accessTokenRepository.delete(accessTokenEntity);
+        });
 
         var newRefreshToken = jwtTokenService.generateNewRefreshToken(authuser);
+
         refreshTokenRepository.save(newRefreshToken);
         var newAccessTokenExpDate = jwtTokenService.expirationAccessTokenDate();
         var newAccessToken = jwtTokenService.generateToken(authuser, newAccessTokenExpDate);
-
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(authuser);
-
-        if (accessTokenEntityOld != null) {
-            accessTokenRepository.delete(accessTokenEntityOld);
-        }
 
         var newAccessTokenEntity = AccessToken.builder().authUser(authuser).token(newAccessToken).expiredDate(newAccessTokenExpDate).build();
 
