@@ -4,6 +4,7 @@ package com.prati.projetomercado.controller;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
+import com.prati.projetomercado.dto.response.AuthResponse;
 import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.repository.AuthUserRepository;
@@ -79,7 +80,7 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Credenciais inválidas", content = @Content)
     })
     @PostMapping("/login")
-    public ResponseEntity<JwtToken> login(@RequestBody LoginUserRequest userRequest) throws Exception {
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginUserRequest userRequest) throws Exception {
        var jwtToken = userService.login(userRequest);
        return new ResponseEntity<>(jwtToken, HttpStatus.OK);
        
