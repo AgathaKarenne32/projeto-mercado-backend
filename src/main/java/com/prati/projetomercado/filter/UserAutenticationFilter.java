@@ -63,7 +63,13 @@ public class UserAutenticationFilter extends OncePerRequestFilter {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found");
             return;
         }
-        var accessTokenFromRepo = accessTokenRepository.findByAuthUser(user);
+        var accessTokenFromRepo = accessTokenRepository.findByAuthUserAndToken(user, token).orElse(null);
+
+        if (accessTokenFromRepo == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No token found");
+        }
+
 
         if (accessTokenFromRepo.getExpiredDate().isBefore(Instant.now()))
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "accessToken expired");
