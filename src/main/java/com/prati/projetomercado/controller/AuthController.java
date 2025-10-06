@@ -4,6 +4,7 @@ package com.prati.projetomercado.controller;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
+import com.prati.projetomercado.dto.response.AuthResponse;
 import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.repository.AuthUserRepository;
@@ -39,7 +40,8 @@ public class AuthController {
         this.jwtTokenServiceImpl = jwtTokenServiceImpl;
     }
 
-    @Operation(summary = "Registra um novo usuário", description = "Cria uma nova conta de usuário no sistema.")
+    @Operation(summary = "Registra um novo usuário",
+            description = "Cria uma nova conta de usuário no sistema.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Usuário cadastrado com sucesso",
                     content = @Content(mediaType = "text/plain", schema = @Schema(type = "string", example = "Usuário cadastrado com sucesso!"))),
@@ -66,21 +68,24 @@ public class AuthController {
     }
 
 
-    @Operation(summary = "Realiza o login de um usuário", description = "Autentica um usuário com nome de usuário e senha, retornando um token de acesso e um refresh token.")
+    @Operation(summary = "Realiza o login de um usuário",
+            description = "Autentica um usuário com nome de usuário e senha, retornando um token de acesso e um refresh token.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Login bem-sucedido",
-                    content = { @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = JwtToken.class)) }),
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = AuthResponse.class))}),
             @ApiResponse(responseCode = "401", description = "Credenciais inválidas", content = @Content)
     })
     @PostMapping("/login")
-    public ResponseEntity<JwtToken> login(@RequestBody LoginUserRequest userRequest) throws Exception {
-       var jwtToken = userService.login(userRequest);
-       return new ResponseEntity<>(jwtToken, HttpStatus.OK);
-       
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginUserRequest userRequest) throws Exception {
+        var authResponse = userService.login(userRequest);
+        return new ResponseEntity<>(authResponse, HttpStatus.OK);
+
     }
 
-    @Operation(summary = "Realiza o logout do usuário", description = "Invalida o token de acesso (JWT) atual do usuário, adicionando-o a uma blacklist.") // NOVO
+    @Operation(summary = "Realiza o logout do usuário",
+            description = "Invalida o token de acesso (JWT) atual do usuário, adicionando-o a uma blacklist.")
+    // NOVO
     @ApiResponses(value = { // NOVO
             @ApiResponse(responseCode = "200", description = "Logout realizado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Token inválido ou expirado")
@@ -94,12 +99,13 @@ public class AuthController {
     }
 
 
-
-    @Operation(summary = "Atualiza o token de acesso", description = "Gera um novo token de acesso (JWT) usando um refresh token válido.") // NOVO
+    @Operation(summary = "Atualiza o token de acesso",
+            description = "Gera um novo token de acesso (JWT) usando um refresh token válido.")
+    // NOVO
     @ApiResponses(value = { // NOVO
             @ApiResponse(responseCode = "200", description = "Token atualizado com sucesso",
-                    content = { @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = JwtToken.class)) }),
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = JwtToken.class))}),
             @ApiResponse(responseCode = "403", description = "Refresh token inválido ou expirado", content = @Content)
     })
     @PostMapping("/refresh-token")
@@ -108,7 +114,9 @@ public class AuthController {
         return new ResponseEntity<>(newJwtToken, HttpStatus.OK);
     }
 
-    @Operation(summary = "Endpoint de teste de autenticação", description = "Verifica se o token de acesso fornecido é válido. Apenas para fins de teste.") // NOVO
+    @Operation(summary = "Endpoint de teste de autenticação",
+            description = "Verifica se o token de acesso fornecido é válido. Apenas para fins de teste.")
+    // NOVO
     @ApiResponses(value = { // NOVO
             @ApiResponse(responseCode = "200", description = "Token válido e autenticado"),
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado, token inválido")

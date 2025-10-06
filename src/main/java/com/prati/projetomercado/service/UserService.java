@@ -2,6 +2,7 @@ package com.prati.projetomercado.service;
 
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
+import com.prati.projetomercado.dto.response.AuthResponse;
 import com.prati.projetomercado.model.JwtToken;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +13,7 @@ public interface UserService {
     
     public void registerUser(CreateUserRequest loginUserRequest);
     
-    public JwtToken login(LoginUserRequest loginUserRequest) throws Exception;
+    public AuthResponse login(LoginUserRequest loginUserRequest) throws Exception;
 
     public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId);
 }
