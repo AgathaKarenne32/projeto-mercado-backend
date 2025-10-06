@@ -61,14 +61,16 @@ public class RascunhoServiceImpl implements RascunhoService {
 
     @Override
     public RascunhoResponse buscarRascunhoPorId(Long rascunhoId) {
-        Rascunho rascunho = rascunhoRepository.findById(rascunhoId)
+        AuthUser usuarioLogado = getUsuarioAutenticado();
+        Rascunho rascunho = rascunhoRepository.findRascunhoByUserAndId(usuarioLogado, rascunhoId)
                 .orElseThrow(() -> new RuntimeException("Rascunho não encontrado"));
         return paraRascunhoResponse(rascunho);
     }
 
     @Override
     public RascunhoResponse atualizarRascunho(Long rascunhoId, UpdateRascunhoRequest updateRascunhoRequest) {
-        Rascunho rascunhoExistente = rascunhoRepository.findById(rascunhoId)
+        AuthUser usuarioLogado = getUsuarioAutenticado();
+        Rascunho rascunhoExistente = rascunhoRepository.findRascunhoByUserAndId(usuarioLogado, rascunhoId)
                 .orElseThrow(() -> new RuntimeException("Rascunho não encontrado"));
         rascunhoExistente.setMercado(updateRascunhoRequest.mercado());
         rascunhoExistente.setConteudo(updateRascunhoRequest.conteudo());
@@ -78,6 +80,6 @@ public class RascunhoServiceImpl implements RascunhoService {
 
     @Override
     public void apagarRascunho(Long rascunhoId) {
-        rascunhoRepository.deleteById(rascunhoId);
+        rascunhoRepository.deleteRascunhoByUserAndId(getUsuarioAutenticado(), rascunhoId);
     }
 }

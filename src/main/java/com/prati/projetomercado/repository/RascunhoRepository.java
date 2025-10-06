@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository // Anotação que marca esta interface como um componente de repositório do Spring
 public interface RascunhoRepository extends JpaRepository<Rascunho, Long> {
@@ -21,5 +22,9 @@ public interface RascunhoRepository extends JpaRepository<Rascunho, Long> {
      * @return Uma lista de rascunhos pertencentes ao usuário.
      */
     List<Rascunho> findByUser(AuthUser user);
+
+    Optional<Rascunho> findRascunhoByUserAndId(AuthUser user, Long id);
+
+    void deleteRascunhoByUserAndId(AuthUser user, Long id);
 
 }
