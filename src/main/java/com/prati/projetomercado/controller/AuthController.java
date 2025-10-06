@@ -16,6 +16,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +42,14 @@ public class AuthController {
         this.jwtTokenServiceImpl = jwtTokenServiceImpl;
     }
 
+    @Operation(summary = "Registra um novo usuário",
+            description = "Cria uma nova conta de usuário no sistema.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Usuário cadastrado com sucesso",
+                    content = @Content(mediaType = "text/plain", schema = @Schema(type = "string", example = "Usuário cadastrado com sucesso!"))),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/register")
     public ResponseEntity<Object> register(@RequestBody CreateUserRequest userRequest) {
         String username = userRequest.username();
@@ -60,6 +70,14 @@ public class AuthController {
     }
 
 
+    @Operation(summary = "Realiza o login de um usuário",
+            description = "Autentica um usuário com nome de usuário e senha, retornando um token de acesso e um refresh token.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login bem-sucedido",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = AuthResponse.class))}),
+            @ApiResponse(responseCode = "401", description = "Credenciais inválidas", content = @Content)
+    })
     @PostMapping("/login")
     public ResponseEntity<JwtToken> login(@RequestBody LoginUserRequest userRequest) throws Exception {
        var jwtToken = userService.login(userRequest);
@@ -78,7 +96,7 @@ public class AuthController {
             @Parameter(hidden = true) // o authorization não precisa ser realizado aqui se ele já ocorre apos o login
             @RequestHeader("Authorization") String authorization) {
         String token = TokenUtils.recoveryToken(authorization);
-        jwtTokenServiceImpl.invalidateToken(token);
+        jwtTokenServiceImpl.invalidateToken(token); // você precisa implementar isso
         return ResponseEntity.ok("Logout realizado com sucesso!");
     }
 
@@ -105,10 +123,7 @@ public class AuthController {
     })
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/test-autenticated")
-    public ResponseEntity<String> test(
-            @Parameter(hidden = true) // authorization não é necessario
-            @RequestHeader String Authorization,
-            @RequestBody String alow) throws Exception {
+    public ResponseEntity<String> test(@RequestHeader String Authorization, @RequestBody String alow) throws Exception {
         return new ResponseEntity<>("ok", HttpStatus.OK);
     }
 
