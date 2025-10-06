@@ -3,6 +3,8 @@ package com.prati.projetomercado.service.impl;
 import com.prati.projetomercado.config.UserDetailsImpl;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
+import com.prati.projetomercado.dto.response.AuthResponse;
+import com.prati.projetomercado.dto.response.UserResponse;
 import com.prati.projetomercado.entity.AccessToken;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
@@ -57,7 +59,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public JwtToken login(LoginUserRequest loginUserRequest) throws Exception {
+    public AuthResponse login(LoginUserRequest loginUserRequest) throws Exception {
         var usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(loginUserRequest.email(), loginUserRequest.password());
         Authentication authentication;
 
@@ -83,7 +85,10 @@ public class UserServiceImpl implements UserService {
         var accessTokenEntity = AccessToken.builder().authUser(userDetailsImpl.getAuthUser()).token(accessToken).expiredDate(accessTokenExpirationDate).build();
         accessTokenRepository.save(accessTokenEntity);
 
-        return new JwtToken(accessToken, refreshToken.getId());
+        var username = userDetailsImpl.getAuthUser().getUsername();
+        var email = userDetailsImpl.getAuthUser().getEmail();
+
+        return new AuthResponse(accessToken, refreshToken.getId(), new UserResponse(username, email));
     }
 
     private Optional<AuthUser> getAuthUser(String accessToken) {
