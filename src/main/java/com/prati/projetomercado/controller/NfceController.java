@@ -1,6 +1,7 @@
 package com.prati.projetomercado.controller;
 
 import com.prati.projetomercado.dto.request.NfceDataRequest;
+import com.prati.projetomercado.dto.response.Catalogo;
 import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.service.nfce.NfceService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,7 +31,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/nfce")
 @RequiredArgsConstructor
-@Tag(name = "NFC-e", description = "Endpoints para processamento de Notas Fiscais de Consumidor Eletrônicas") // NOVO
+@Tag(name = "NFC-e",
+        description = "Endpoints para processamento de Notas Fiscais de Consumidor Eletrônicas")
 public class NfceController {
     
     private final NfceService nfceService;
