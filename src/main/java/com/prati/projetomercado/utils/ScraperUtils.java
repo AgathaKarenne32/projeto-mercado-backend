@@ -1,6 +1,7 @@
 package com.prati.projetomercado.utils;
 
-import com.prati.projetomercado.dto.request.NfceDataRequest;
+import com.prati.projetomercado.dto.request.NfceRequest;
+import com.prati.projetomercado.dto.request.SupermarketRequest;
 import com.prati.projetomercado.exceptions.NfceScrapeException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -26,11 +27,11 @@ public class ScraperUtils {
         return LocalDate.parse(dateString, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
-    public NfceDataRequest getData(String url) {
+    public NfceRequest getData(String url) {
 
         try {
             Document doc = Jsoup.connect(url).get();
-            List<NfceDataRequest.Item> products = new ArrayList<>();
+            List<NfceRequest.Item> products = new ArrayList<>();
 
             // gets store information
             Elements storeInfo = doc.select("div#conteudo div.txtCenter > div");
@@ -40,13 +41,13 @@ public class ScraperUtils {
             // splits address information into separate fields
             String addressString = storeInfo.get(2).text();
             String[] parts = addressString.split("\\s*,\\s*");
-            NfceDataRequest.Address address = new NfceDataRequest.Address(
-                    parts[0], // street
-                    parts[1], // number
-                    parts[2], // complement
-                    parts[3], // neighborhood
+
+            SupermarketRequest supermarket = new SupermarketRequest(
+                    null,
+                    store,
+                    cnpj,
                     parts[4], // city
-                    parts[5]  // state
+                    parts[5] // state
             );
 
             // gets total price
@@ -85,10 +86,10 @@ public class ScraperUtils {
 
                 BigDecimal price = new BigDecimal(priceString);
 
-                products.add(new NfceDataRequest.Item(name, code, quantity, unit, price));
+                products.add(new NfceRequest.Item(name, code, quantity, unit, price));
             }
 
-            return new NfceDataRequest(store, cnpj, address, accessKey, date, totalPrice, products);
+            return new NfceRequest(supermarket, accessKey, date, totalPrice, products);
         } catch (IOException e) {
             throw new NfceScrapeException("Erro ao buscar dados da página");
         } catch (IllegalArgumentException e) {

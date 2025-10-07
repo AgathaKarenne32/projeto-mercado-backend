@@ -1,5 +1,6 @@
 package com.prati.projetomercado.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -8,7 +9,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,10 +20,7 @@ import java.time.Instant;
 import java.util.List;
 
 @Entity
-@Table(
-        name = "supermarket",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"cnpj", "created_by_user_id"})
-)
+@Table(name = "supermarket")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -37,10 +34,6 @@ public class Supermarket {
 
     private String name;
     private String cnpj;
-    private String street;
-    private String number;
-    private String complement;
-    private String neighborhood;
     private String city;
     private String state;
 
@@ -56,4 +49,7 @@ public class Supermarket {
 
     @CreationTimestamp
     private Instant creationDate;
+
+    @Column(name = "manual", nullable = false)
+    private boolean manual;
 }
