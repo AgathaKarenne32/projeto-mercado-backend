@@ -7,10 +7,13 @@ import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.EditNotAllowedException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.SupermarketDeletionException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import com.prati.projetomercado.repository.AuthUserRepository;
+import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
+import com.prati.projetomercado.utils.EntityBuilderUtils;
 import com.prati.projetomercado.utils.TokenUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,12 +26,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SupermarketService {
 
+    private final EntityBuilderUtils builder;
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
+    private final PurchaseRepository purchaseRepo;
     private final JwtTokenServiceImpl jwtTokenServiceImpl;
 
     @Transactional(readOnly = true)
-    public SupermarketResponse getOne(String accessToken, Long id) {
+    public SupermarketResponse getOne(String accessToken, long id) {
         Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
         return SupermarketResponse.toDto(supermarket);
@@ -52,25 +57,16 @@ public class SupermarketService {
     public SupermarketResponse saveSupermarket(String accessToken, SupermarketRequest supermarketData) {
         AuthUser user = getAuthenticatedUser(accessToken);
 
-        Supermarket market = supermarketRepo.save(
-                Supermarket.builder()
-                        .name(supermarketData.store())
-                        .cnpj(supermarketData.cnpj())
-                        .city(supermarketData.city())
-                        .state(supermarketData.state())
-                        .createdByUser(user)
-                        .manual(true)
-                        .build()
-        );
+        Supermarket market = supermarketRepo.save(builder.buildSupermarket(supermarketData, user, true));
 
         return SupermarketResponse.toDto(market);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public SupermarketResponse edit(String accessToken, SupermarketRequest supermarketData) {
+    public SupermarketResponse edit(String accessToken, long id, SupermarketRequest supermarketData) {
         AuthUser user = getAuthenticatedUser(accessToken);
 
-        Supermarket supermarket = supermarketRepo.findById(supermarketData.id())
+        Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
 
         if (!supermarket.isManual()) {
@@ -86,13 +82,11 @@ public class SupermarketService {
         supermarket.setCity(supermarketData.city());
         supermarket.setState(supermarketData.state());
 
-        supermarketRepo.save(supermarket);
-
         return SupermarketResponse.toDto(supermarket);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void delete(String accessToken, Long id) {
+    public void delete(String accessToken, long id) {
         AuthUser user = getAuthenticatedUser(accessToken);
 
         Supermarket supermarket = supermarketRepo.findById(id)
@@ -104,6 +98,10 @@ public class SupermarketService {
 
         if (!supermarket.getCreatedByUser().getId().equals(user.getId())) {
             throw new UnauthorizedAccessException("Você não tem permissão para deletar este supermercado");
+        }
+
+        if (purchaseRepo.findBySupermarket(supermarket).isPresent()) {
+            throw new SupermarketDeletionException("Não é possível deletar este supermercado porque existem notas fiscais associadas a ele.");
         }
 
         supermarketRepo.delete(supermarket);

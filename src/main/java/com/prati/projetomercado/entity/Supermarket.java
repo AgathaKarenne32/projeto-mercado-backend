@@ -1,5 +1,6 @@
 package com.prati.projetomercado.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -44,7 +45,7 @@ public class Supermarket {
     @OneToMany(mappedBy = "supermarket")
     private List<Purchase> purchases;
 
-    @OneToMany(mappedBy = "supermarket")
+    @OneToMany(mappedBy = "supermarket", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Catalog> catalogItems;
 
     @CreationTimestamp

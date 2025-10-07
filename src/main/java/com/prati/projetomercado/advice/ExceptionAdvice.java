@@ -5,6 +5,7 @@ import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.DuplicateNfceException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.SupermarketDeletionException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -49,6 +50,11 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(DuplicateNfceException.class)
     public ResponseEntity<Object> handleDuplicateNfce(DuplicateNfceException ex) {
+        return ResponseEntity.status(409).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(SupermarketDeletionException.class)
+    public ResponseEntity<Object> handleSupermarketDeletion(SupermarketDeletionException ex) {
         return ResponseEntity.status(409).body(new ErrorResponse(ex.getMessage()));
     }
 }
