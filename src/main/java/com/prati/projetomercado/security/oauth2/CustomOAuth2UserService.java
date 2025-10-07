@@ -15,15 +15,22 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import com.prati.projetomercado.service.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
+
 
 import java.time.Instant;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-    @Autowired
-    private AuthUserRepository authUserRepository;
+
+    private final AuthUserRepository authUserRepository;
+
+    private final ObjectProvider<UserService> userServiceProvider;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -54,13 +61,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private AuthUser registerNewUser(OAuth2UserInfo oAuth2UserInfo) {
-        AuthUser authUser = AuthUser.builder()
-                .email(oAuth2UserInfo.getEmail())
-                .creationDate(Instant.now())
-                .build();
+        //Pegamos a instância do UserService do "fornecedor" apenas quando o metodo é chamado.
+        UserService userService = userServiceProvider.getObject();
 
-        authUserRepository.save(authUser);
-
-        return authUser;
+        return userService.registerOAuth2User(
+                oAuth2UserInfo.getName(),
+                oAuth2UserInfo.getEmail()
+        );
     }
 }

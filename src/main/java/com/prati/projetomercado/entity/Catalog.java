@@ -2,7 +2,9 @@ package com.prati.projetomercado.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.Instant;
 import java.util.List;
 
 @Entity
@@ -29,4 +31,7 @@ public class Catalog {
 
     @OneToMany(mappedBy = "catalog")
     private List<Item> items;
+
+    @CreationTimestamp
+    private Instant creationDate;
 }

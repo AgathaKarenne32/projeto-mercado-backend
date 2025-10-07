@@ -6,6 +6,8 @@ import com.prati.projetomercado.dto.response.UserResponse; // adicionado para a 
 import com.prati.projetomercado.dto.request.ChangePasswordRequest; // adicionado para a issues 9
 import com.prati.projetomercado.model.JwtToken;
 import org.springframework.stereotype.Service;
+import com.prati.projetomercado.entity.AuthUser;
+
 
 import java.util.UUID;
 
@@ -17,6 +19,8 @@ public interface UserService {
     public JwtToken login(LoginUserRequest loginUserRequest) throws Exception;
 
     public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId);
+
+    AuthUser registerOAuth2User(String username, String email);
 
     /**
      * Busca as informações do usuário atualmente autenticado.

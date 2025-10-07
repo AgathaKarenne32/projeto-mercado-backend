@@ -1,28 +1,30 @@
 package com.prati.projetomercado.service.impl;
 
 import com.prati.projetomercado.config.UserDetailsImpl;
+import com.prati.projetomercado.dto.request.ChangePasswordRequest;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
+import com.prati.projetomercado.dto.response.UserResponse;
 import com.prati.projetomercado.entity.AccessToken;
+import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.FieldError;
 import com.prati.projetomercado.model.JwtToken;
-import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.repository.AccessTokenRepository;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.RefreshTokenRepository;
 import com.prati.projetomercado.service.EmailService;
 import com.prati.projetomercado.service.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import com.prati.projetomercado.dto.response.UserResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import com.prati.projetomercado.dto.request.ChangePasswordRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
@@ -33,25 +35,20 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    private AuthenticationManager authenticationManager;
-    private AuthUserRepository userRepository;
-    private JwtTokenServiceImpl jwtTokenService;
-    private PasswordEncoder encoder;
-    private RefreshTokenRepository refreshTokenRepository;
-    private AccessTokenRepository accessTokenRepository;
+    private final AuthenticationManager authenticationManager;
+    private final AuthUserRepository userRepository;
+    private final JwtTokenServiceImpl jwtTokenService;
+    private final PasswordEncoder encoder;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final AccessTokenRepository accessTokenRepository;
     private final EmailService emailService;
 
-    public UserServiceImpl(AuthenticationManager authenticationManager, AuthUserRepository userRepository, JwtTokenServiceImpl jwtTokenService, PasswordEncoder encoder, RefreshTokenRepository refreshTokenRepository, AccessTokenRepository accessTokenRepository, EmailService emailService) {
-        this.authenticationManager = authenticationManager;
-        this.userRepository = userRepository;
-        this.jwtTokenService = jwtTokenService;
-        this.encoder = encoder;
-        this.refreshTokenRepository = refreshTokenRepository;
-        this.accessTokenRepository = accessTokenRepository;
-        this.emailService = emailService;
-    }
+    @Value("${email.confirmation.enabled}")
+    private boolean emailConfirmationEnabled;
+
 
     @Override
     public void registerUser(CreateUserRequest createUserRequest) {
@@ -64,21 +61,47 @@ public class UserServiceImpl implements UserService {
         if (createUserRequest.password().length() < 8) { // Ajustado para 8, conforme seu controller
             throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 8 characters")));
         }
-        String confirmationToken = UUID.randomUUID().toString(); // Gera um token aleatório
+        // A NOVA LÓGICA CONDICIONAL INTERRUPTOR
+        if (emailConfirmationEnabled) {
+            // --- CENÁRIO 1: ENVIO DE E-MAIL LIGADO --- email.confirmation.enabled=true
+            String confirmationToken = UUID.randomUUID().toString();
+            AuthUser newUser = AuthUser.builder()
+                    .email(createUserRequest.email())
+                    .username(createUserRequest.username())
+                    .password(encoder.encode(createUserRequest.password()))
+                    .enabled(false) // Começa desativado
+                    .confirmationToken(confirmationToken)
+                    .confirmationTokenExpiry(LocalDateTime.now().plusHours(24))
+                    .build();
+            AuthUser savedUser = userRepository.save(newUser);
+            emailService.sendConfirmationEmail(savedUser);
+        } else {
+            // --- CENÁRIO 2: ENVIO DE E-MAIL DESLIGADO (MODO DEV) --- email.confirmation.enabled=false
+            AuthUser newUser = AuthUser.builder()
+                    .email(createUserRequest.email())
+                    .username(createUserRequest.username())
+                    .password(encoder.encode(createUserRequest.password()))
+                    .enabled(true) // Já começa ativado
+                    .build();
+            userRepository.save(newUser);
+        }
+
+    }
+
+    @Override
+    public AuthUser registerOAuth2User(String username, String email) {
+        Optional<AuthUser> existingUser = userRepository.findByEmail(email);
+        if (existingUser.isPresent()) {
+            return existingUser.get();
+        }
 
         AuthUser newUser = AuthUser.builder()
-                .email(createUserRequest.email())
-                .username(createUserRequest.username())
-                .password(encoder.encode(createUserRequest.password()))
-                .enabled(false) // O usuário começa desativado
-                .confirmationToken(confirmationToken) // Salva o token de confirmação
-                .confirmationTokenExpiry(LocalDateTime.now().plusHours(24)) // Token expira em 24 horas
+                .email(email)
+                .username(username)
+                .enabled(true)
                 .build();
 
-        AuthUser savedUser = userRepository.save(newUser);
-
-        // Envia o e-mail de confirmação
-        emailService.sendConfirmationEmail(savedUser);
+        return userRepository.save(newUser);
     }
 
     @Override

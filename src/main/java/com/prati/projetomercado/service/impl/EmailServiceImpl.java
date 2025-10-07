@@ -16,7 +16,7 @@ public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
 
     // Pega o email do remetente do application.properties para não deixar no código
-    @Value("${spring.mail.username}")
+    @Value("${email.sender.from}")
     private String fromEmail;
 
     @Override
