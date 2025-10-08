@@ -9,6 +9,8 @@ import com.prati.projetomercado.entity.Purchase;
 import com.prati.projetomercado.entity.Supermarket;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 @Component
 public class EntityBuilderUtils {
 
@@ -26,7 +28,9 @@ public class EntityBuilderUtils {
     public Catalog buildCatalog(NfceRequest.Item product, Supermarket market) {
         return Catalog.builder()
                 .supermarket(market)
-                .code(product.code())
+                .code(product.code() == null || product.code().isEmpty()
+                        ? UUID.randomUUID().toString() : product.code()
+                )
                 .name(product.name())
                 .unit(product.unit())
                 .build();

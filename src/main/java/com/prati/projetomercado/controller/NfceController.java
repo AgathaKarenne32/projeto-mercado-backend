@@ -3,6 +3,7 @@ package com.prati.projetomercado.controller;
 import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
 import com.prati.projetomercado.dto.response.NfceResponse;
+import com.prati.projetomercado.dto.response.StatesResponse;
 import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.service.nfce.NfceService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,6 +48,12 @@ public class NfceController {
                                                                 @PathVariable("access-key") String accessKey) {
         NfceResponse data = nfceService.getOne(authorization, accessKey);
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal encontrada com sucesso.", data));
+    }
+
+    @GetMapping("/states")
+    public ResponseEntity<SuccessResponse<StatesResponse>> getStates(@RequestHeader("Authorization") String authorization) {
+        StatesResponse data = nfceService.getStates(authorization);
+        return ResponseEntity.ok(new SuccessResponse<>("Lista de estados implementados encontrada com sucesso.", data));
     }
 
     @PostMapping("/from-url")

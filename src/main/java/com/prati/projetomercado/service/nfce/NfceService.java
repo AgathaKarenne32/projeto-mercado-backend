@@ -3,6 +3,7 @@ package com.prati.projetomercado.service.nfce;
 import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
 import com.prati.projetomercado.dto.response.NfceResponse;
+import com.prati.projetomercado.dto.response.StatesResponse;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.Catalog;
 import com.prati.projetomercado.entity.Item;
@@ -19,12 +20,15 @@ import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
-import com.prati.projetomercado.utils.ScraperUtils;
 import com.prati.projetomercado.utils.TokenUtils;
+import com.prati.projetomercado.utils.scraper.IScraper;
+import com.prati.projetomercado.utils.scraper.StateGroup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +38,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NfceService {
 
-    private final ScraperUtils scraper;
     private final EntityBuilderUtils builder;
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
@@ -69,8 +72,16 @@ public class NfceService {
         return nfceList;
     }
 
+    @Transactional(readOnly = true)
+    public StatesResponse getStates(String accessToken) {
+        getAuthenticatedUser(accessToken);
+        return new StatesResponse(StateGroup.getAllImplementedStates());
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public NfceResponse registerLink(String accessToken, String url) {
+        String state = getStateFromUrl(url);
+        IScraper scraper = StateGroup.getScraperByState(state);
         NfceRequest nfceData = scraper.getData(url);
         return savePurchase(nfceData, accessToken, false);
     }
@@ -207,5 +218,28 @@ public class NfceService {
         var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
         return userRepo.findByEmail(email)
                 .orElseThrow(() -> new AuthException("Usuário não encontrado."));
+    }
+
+    public String getStateFromUrl(String url) {
+        try {
+            String safeUrl = url.replace("|", "%7C");
+            URI uri = new URI(safeUrl);
+            String host = uri.getHost();
+
+            if (host == null) {
+                throw new IllegalArgumentException("Host inválido.");
+            }
+
+            String[] parts = host.split("\\.");
+
+            if (parts.length >= 3 && "gov".equals(parts[parts.length - 2]) && "br".equals(parts[parts.length - 1])) {
+                return parts[parts.length - 3].toUpperCase();
+            }
+
+            throw new IllegalArgumentException("Estado não encontrado na URL");
+
+        } catch (URISyntaxException ex) {
+            throw new IllegalArgumentException("URL inválida para extrair o estado");
+        }
     }
 }
