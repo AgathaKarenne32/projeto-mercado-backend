@@ -8,4 +8,8 @@ public record UserResponse(
         String email,
         Instant creationDate
 ) {
+
+    public String toJson() {
+        return "{username='"+username+"',email='"+email+"'}";
+    }
 }

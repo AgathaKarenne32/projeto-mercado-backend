@@ -1,9 +1,9 @@
 package com.prati.projetomercado.controller;
 
+
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
-import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.service.UserService;
@@ -59,7 +59,7 @@ public class AuthController {
     }
 
     @Operation(summary = "Realiza o logout do usuário", description = "Invalida o token de acesso (JWT) atual do usuário, apagando-o do banco de dados.")
-    @ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Logout realizado com sucesso") })
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Logout realizado com sucesso")})
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
     public ResponseEntity<String> logout(
@@ -69,7 +69,6 @@ public class AuthController {
         jwtTokenServiceImpl.invalidateToken(token); // Este método agora apaga o token do DB
         return ResponseEntity.ok("Logout realizado com sucesso!");
     }
-
 
 
     @Operation(summary = "Atualiza o token de acesso", description = "Gera um novo token de acesso (JWT) usando um refresh token válido.")

@@ -4,8 +4,9 @@ import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.DuplicateNfceException;
-import com.prati.projetomercado.exceptions.NfceNotFoundException;
-import com.prati.projetomercado.exceptions.UnauthorizedNfceAccessException;
+import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.SupermarketDeletionException;
+import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;
@@ -37,18 +38,23 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(401).body(new ErrorResponse(ex.getMessage()));
     }
 
-    @ExceptionHandler(UnauthorizedNfceAccessException.class)
-    public ResponseEntity<Object> handleUnauthorizedNfceAccess(UnauthorizedNfceAccessException ex) {
+    @ExceptionHandler(UnauthorizedAccessException.class)
+    public ResponseEntity<Object> handleUnauthorizedNfceAccess(UnauthorizedAccessException ex) {
         return ResponseEntity.status(403).body(new ErrorResponse(ex.getMessage()));
     }
 
-    @ExceptionHandler(NfceNotFoundException.class)
-    public ResponseEntity<Object> handleNfceNotFound(NfceNotFoundException ex) {
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Object> handleNfceNotFound(EntityNotFoundException ex) {
         return ResponseEntity.status(404).body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(DuplicateNfceException.class)
     public ResponseEntity<Object> handleDuplicateNfce(DuplicateNfceException ex) {
+        return ResponseEntity.status(409).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(SupermarketDeletionException.class)
+    public ResponseEntity<Object> handleSupermarketDeletion(SupermarketDeletionException ex) {
         return ResponseEntity.status(409).body(new ErrorResponse(ex.getMessage()));
     }
 }

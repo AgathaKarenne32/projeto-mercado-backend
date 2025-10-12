@@ -1,13 +1,13 @@
 package com.prati.projetomercado.service;
 
+import com.prati.projetomercado.dto.request.ChangePasswordRequest;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
-import com.prati.projetomercado.dto.response.UserResponse; // adicionado para a issues 9
-import com.prati.projetomercado.dto.request.ChangePasswordRequest; // adicionado para a issues 9
+import com.prati.projetomercado.dto.response.AuthResponse;
+import com.prati.projetomercado.dto.response.UserResponse;
+import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.model.JwtToken;
 import org.springframework.stereotype.Service;
-import com.prati.projetomercado.entity.AuthUser;
-
 
 import java.util.UUID;
 
@@ -16,7 +16,7 @@ public interface UserService {
     
     public void registerUser(CreateUserRequest loginUserRequest);
     
-    public JwtToken login(LoginUserRequest loginUserRequest) throws Exception;
+    public AuthResponse login(LoginUserRequest loginUserRequest) throws Exception;
 
     public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId);
 

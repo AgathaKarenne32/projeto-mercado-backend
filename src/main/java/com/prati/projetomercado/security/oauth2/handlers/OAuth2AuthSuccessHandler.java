@@ -1,6 +1,7 @@
 package com.prati.projetomercado.security.oauth2.handlers;
 
 import com.prati.projetomercado.config.UserDetailsImpl;
+import com.prati.projetomercado.dto.response.UserResponse;
 import com.prati.projetomercado.entity.AccessToken;
 import com.prati.projetomercado.entity.RefreshToken;
 import com.prati.projetomercado.repository.AccessTokenRepository;
@@ -85,6 +86,7 @@ public class OAuth2AuthSuccessHandler extends SimpleUrlAuthenticationSuccessHand
         return UriComponentsBuilder.fromUriString(targetUri)
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken.getId())
+                .queryParam("user", new UserResponse(authUser.getUsername(), authUser.getEmail()).toJson())
                 .build().toUriString();
 
     }

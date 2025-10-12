@@ -4,6 +4,7 @@ import com.prati.projetomercado.config.UserDetailsImpl;
 import com.prati.projetomercado.dto.request.ChangePasswordRequest;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
+import com.prati.projetomercado.dto.response.AuthResponse;
 import com.prati.projetomercado.dto.response.UserResponse;
 import com.prati.projetomercado.entity.AccessToken;
 import com.prati.projetomercado.entity.AuthUser;
@@ -26,7 +27,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -55,7 +55,6 @@ public class UserServiceImpl implements UserService {
         if (!createUserRequest.password().equals(createUserRequest.confirmPassword())) {
             throw new BadCredentialsException(
                     List.of(new FieldError("confirmPassword", "Passwords don't match"), new FieldError("password", "Passwords don't match")));
-
         }
 
         if (createUserRequest.password().length() < 8) { // Ajustado para 8, conforme seu controller
@@ -85,7 +84,6 @@ public class UserServiceImpl implements UserService {
                     .build();
             userRepository.save(newUser);
         }
-
     }
 
     @Override
@@ -105,7 +103,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public JwtToken login(LoginUserRequest loginUserRequest) throws Exception {
+    public AuthResponse login(LoginUserRequest loginUserRequest) throws Exception {
         var usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(loginUserRequest.email(), loginUserRequest.password());
         Authentication authentication;
 
@@ -137,7 +135,12 @@ public class UserServiceImpl implements UserService {
         var accessTokenEntity = AccessToken.builder().authUser(userDetailsImpl.getAuthUser()).token(accessToken).expiredDate(accessTokenExpirationDate).build();
         accessTokenRepository.save(accessTokenEntity);
 
-        return new JwtToken(accessToken, refreshToken.getId());
+        var id = userDetailsImpl.getAuthUser().getId();
+        var username = userDetailsImpl.getAuthUser().getUsername();
+        var email = userDetailsImpl.getAuthUser().getEmail();
+        var creationDate = userDetailsImpl.getAuthUser().getCreationDate();
+
+        return new AuthResponse(accessToken, refreshToken.getId(), new UserResponse(id, username, email, creationDate));
     }
 
     private Optional<AuthUser> getAuthUser(String accessToken) {
@@ -159,17 +162,16 @@ public class UserServiceImpl implements UserService {
         refreshTokenRepository.save(refreshToken);
 
         var authuser = getAuthUser(accessToken).orElseThrow(() -> new AuthException("user not found"));
+        var accessTokenEntityOld = accessTokenRepository.findByAuthUserAndToken(authuser, accessToken);
+        accessTokenEntityOld.ifPresent(accessTokenEntity -> {
+            accessTokenRepository.delete(accessTokenEntity);
+        });
 
         var newRefreshToken = jwtTokenService.generateNewRefreshToken(authuser);
+
         refreshTokenRepository.save(newRefreshToken);
         var newAccessTokenExpDate = jwtTokenService.expirationAccessTokenDate();
         var newAccessToken = jwtTokenService.generateToken(authuser, newAccessTokenExpDate);
-
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(authuser);
-
-        if (accessTokenEntityOld != null) {
-            accessTokenRepository.delete(accessTokenEntityOld);
-        }
 
         var newAccessTokenEntity = AccessToken.builder().authUser(authuser).token(newAccessToken).expiredDate(newAccessTokenExpDate).build();
 

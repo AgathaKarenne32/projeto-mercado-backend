@@ -1,6 +1,9 @@
 package com.prati.projetomercado.service.nfce;
 
-import com.prati.projetomercado.dto.request.NfceDataRequest;
+import com.prati.projetomercado.dto.request.NfcePatchRequest;
+import com.prati.projetomercado.dto.request.NfceRequest;
+import com.prati.projetomercado.dto.response.NfceResponse;
+import com.prati.projetomercado.dto.response.StatesResponse;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.Catalog;
 import com.prati.projetomercado.entity.Item;
@@ -9,19 +12,23 @@ import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.DuplicateNfceException;
 import com.prati.projetomercado.exceptions.EditNotAllowedException;
-import com.prati.projetomercado.exceptions.NfceNotFoundException;
-import com.prati.projetomercado.exceptions.UnauthorizedNfceAccessException;
+import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
 import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
-import com.prati.projetomercado.utils.ScraperUtils;
+import com.prati.projetomercado.utils.EntityBuilderUtils;
 import com.prati.projetomercado.utils.TokenUtils;
+import com.prati.projetomercado.utils.scraper.IScraper;
+import com.prati.projetomercado.utils.scraper.StateGroup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -31,8 +38,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NfceService {
 
-    private final ScraperUtils scraper;
-    private final NfceHelper helper;
+    private final EntityBuilderUtils builder;
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
     private final PurchaseRepository purchaseRepo;
@@ -40,83 +46,106 @@ public class NfceService {
     private final JwtTokenServiceImpl jwtTokenServiceImpl;
 
     @Transactional(readOnly = true)
-    public NfceDataRequest getOne(String accessToken, String accessKey) {
+    public NfceResponse getOne(String accessToken, String accessKey) {
         AuthUser user = getAuthenticatedUser(accessToken);
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
-                .orElseThrow(() -> new NfceNotFoundException("Nota fiscal não encontrada."));
+                .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.getUser().getId().equals(user.getId())) {
-            throw new UnauthorizedNfceAccessException("Você não tem permissão para acessar esta nota fiscal.");
+            throw new UnauthorizedAccessException("Você não tem permissão para acessar esta nota fiscal.");
         }
 
-        return helper.createNfceDto(purchase);
+        return NfceResponse.toDto(purchase);
     }
 
     @Transactional(readOnly = true)
-    public List<NfceDataRequest> getAll(String accessToken) {
+    public List<NfceResponse> getAll(String accessToken) {
         AuthUser user = getAuthenticatedUser(accessToken);
         List<Purchase> purchases = purchaseRepo.findAllByUser(user);
-        List<NfceDataRequest> nfceList = new ArrayList<>();
+        List<NfceResponse> nfceList = new ArrayList<>();
 
         for (Purchase purchase : purchases) {
-            NfceDataRequest nfce = helper.createNfceDto(purchase);
-            nfceList.add(nfce);
+            NfceResponse nfceDto = NfceResponse.toDto(purchase);
+            nfceList.add(nfceDto);
         }
 
         return nfceList;
     }
 
+    @Transactional(readOnly = true)
+    public StatesResponse getStates(String accessToken) {
+        getAuthenticatedUser(accessToken);
+        return new StatesResponse(StateGroup.getAllImplementedStates());
+    }
+
     @Transactional(rollbackFor = Exception.class)
-    public NfceDataRequest registerLink(String accessToken, String url) {
-        NfceDataRequest nfceData = scraper.getData(url);
+    public NfceResponse registerLink(String accessToken, String url) {
+        String state = getStateFromUrl(url);
+        IScraper scraper = StateGroup.getScraperByState(state);
+        NfceRequest nfceData = scraper.getData(url);
         return savePurchase(nfceData, accessToken, false);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void registerManual(String accessToken, NfceDataRequest nfceData) {
-        savePurchase(nfceData, accessToken, true);
+    public NfceResponse registerManual(String accessToken, NfceRequest nfceData) {
+        return savePurchase(nfceData, accessToken, true);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void edit(String accessToken, NfceDataRequest nfceData) {
+    public NfceResponse edit(String accessToken, String accessKey, NfceRequest nfceData) {
         AuthUser user = getAuthenticatedUser(accessToken);
+
         Purchase purchase = purchaseRepo.findByAccessKey(nfceData.accessKey())
-                .orElseThrow(() -> new NfceNotFoundException("Nota fiscal não encontrada."));
+                .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.isManual()) {
             throw new EditNotAllowedException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
         }
 
         if (!purchase.getUser().getId().equals(user.getId())) {
-            throw new UnauthorizedNfceAccessException("Você não tem permissão para acessar esta nota fiscal.");
+            throw new UnauthorizedAccessException("Você não tem permissão para editar esta nota fiscal.");
         }
 
-        supermarketRepo.findByCnpjAndCreatedByUser(nfceData.cnpj(), user)
-                .ifPresent(foundMarket -> {
-                    Supermarket purchaseMarket = purchase.getSupermarket();
-                    if (!foundMarket.getId().equals(purchaseMarket.getId())) {
-                        purchase.setSupermarket(foundMarket);
-                    }
-                });
-
-        helper.updateSupermarket(nfceData, purchase);
-        supermarketRepo.save(purchase.getSupermarket());
-
-        purchase.setSupermarket(purchase.getSupermarket());
-        purchase.setAccessKey(nfceData.accessKey());
         purchase.setDate(nfceData.date());
         purchase.setTotalPrice(nfceData.totalPrice());
         purchase.getItems().clear();
 
-        for (NfceDataRequest.Item product : nfceData.products()) {
+        for (NfceRequest.Item product : nfceData.products()) {
             Catalog catalog = catalogRepo.findBySupermarketAndCode(purchase.getSupermarket(), product.code())
-                    .orElseGet(() -> catalogRepo.save(helper.buildCatalog(product, purchase.getSupermarket())));
-
-            Item item = helper.buildItem(product, purchase, catalog);
-            purchase.getItems().add(item);
+                    .orElseGet(() -> catalogRepo.save(builder.buildCatalog(product, purchase.getSupermarket())));
+            purchase.getItems().add(builder.buildItem(product, purchase, catalog));
         }
 
-        purchaseRepo.save(purchase);
+        return NfceResponse.toDto(purchase);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public NfceResponse patch(String accessToken, String accessKey, NfcePatchRequest patchData) {
+        AuthUser user = getAuthenticatedUser(accessToken);
+
+        Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
+                .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
+
+        if (!purchase.isManual()) {
+            throw new EditNotAllowedException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
+        }
+
+        if (!purchase.getUser().getId().equals(user.getId())) {
+            throw new UnauthorizedAccessException("Você não tem permissão para editar esta nota fiscal.");
+        }
+
+        if (patchData.date() != null) purchase.setDate(patchData.date());
+        if (patchData.totalPrice() != null) purchase.setTotalPrice(patchData.totalPrice());
+        if (patchData.products() != null) {
+            purchase.getItems().clear();
+            for (NfceRequest.Item item : patchData.products()) {
+                Catalog catalog = catalogRepo.findBySupermarketAndCode(purchase.getSupermarket(), item.code())
+                        .orElseGet(() -> catalogRepo.save(builder.buildCatalog(item, purchase.getSupermarket())));
+                purchase.getItems().add(builder.buildItem(item, purchase, catalog));
+            }
+        }
+
+        return NfceResponse.toDto(purchase);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -124,16 +153,16 @@ public class NfceService {
         AuthUser user = getAuthenticatedUser(accessToken);
 
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
-                .orElseThrow(() -> new NfceNotFoundException("Nota fiscal não encontrada."));
+                .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.getUser().getId().equals(user.getId())) {
-            throw new UnauthorizedNfceAccessException("Você não tem permissão para acessar esta nota fiscal.");
+            throw new UnauthorizedAccessException("Você não tem permissão para deletar esta nota fiscal.");
         }
 
         purchaseRepo.delete(purchase);
     }
 
-    private NfceDataRequest savePurchase(NfceDataRequest nfceData, String accessToken, boolean isManual) {
+    private NfceResponse savePurchase(NfceRequest nfceData, String accessToken, boolean isManual) {
         AuthUser user = getAuthenticatedUser(accessToken);
 
         purchaseRepo.findByAccessKey(nfceData.accessKey())
@@ -141,9 +170,17 @@ public class NfceService {
                     throw new DuplicateNfceException("Nota fiscal já existe.");
                 });
 
-        AuthUser createdByUser = isManual ? user : null;
-        Supermarket market = supermarketRepo.findByCnpjAndCreatedByUser(nfceData.cnpj(), createdByUser)
-                .orElseGet(() -> supermarketRepo.save(helper.buildSupermarket(nfceData, createdByUser)));
+        Supermarket market;
+
+        if (nfceData.supermarket().id() != null) {
+            market = supermarketRepo.findById(nfceData.supermarket().id())
+                    .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
+        } else if (!isManual) {
+            market = supermarketRepo.findByCnpjAndManual(nfceData.supermarket().cnpj(), false)
+                    .orElseGet(() -> supermarketRepo.save(builder.buildSupermarket(nfceData.supermarket(), user, false)));
+        } else {
+            market = supermarketRepo.save(builder.buildSupermarket(nfceData.supermarket(), user, true));
+        }
 
         Purchase purchase = Purchase.builder()
                 .user(user)
@@ -156,9 +193,9 @@ public class NfceService {
                 .manual(isManual)
                 .build();
 
-        for (NfceDataRequest.Item product : nfceData.products()) {
+        for (NfceRequest.Item product : nfceData.products()) {
             Catalog catalog = catalogRepo.findBySupermarketAndCode(market, product.code())
-                    .orElseGet(() -> catalogRepo.save(helper.buildCatalog(product, market)));
+                    .orElseGet(() -> catalogRepo.save(builder.buildCatalog(product, market)));
 
             Optional<Item> existingItem = purchase.getItems().stream()
                     .filter(i -> i.getCatalog().getCode().equals(product.code()))
@@ -168,18 +205,41 @@ public class NfceService {
                 Item item = existingItem.get();
                 item.setQuantity(item.getQuantity().add(product.quantity()));
             } else {
-                Item item = helper.buildItem(product, purchase, catalog);
+                Item item = builder.buildItem(product, purchase, catalog);
                 purchase.getItems().add(item);
             }
         }
 
         purchaseRepo.save(purchase);
-        return nfceData;
+        return NfceResponse.toDto(purchase);
     }
 
     private AuthUser getAuthenticatedUser(String accessToken) {
         var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
         return userRepo.findByEmail(email)
                 .orElseThrow(() -> new AuthException("Usuário não encontrado."));
+    }
+
+    public String getStateFromUrl(String url) {
+        try {
+            String safeUrl = url.replace("|", "%7C");
+            URI uri = new URI(safeUrl);
+            String host = uri.getHost();
+
+            if (host == null) {
+                throw new IllegalArgumentException("Host inválido.");
+            }
+
+            String[] parts = host.split("\\.");
+
+            if (parts.length >= 3 && "gov".equals(parts[parts.length - 2]) && "br".equals(parts[parts.length - 1])) {
+                return parts[parts.length - 3].toUpperCase();
+            }
+
+            throw new IllegalArgumentException("Estado não encontrado na URL");
+
+        } catch (URISyntaxException ex) {
+            throw new IllegalArgumentException("URL inválida para extrair o estado");
+        }
     }
 }
