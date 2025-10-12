@@ -15,11 +15,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Arrays;
 
 @Component
@@ -34,35 +36,45 @@ public class UserAutenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        return Arrays.stream(SecurityConfiguration.PUBLIC_ENDPOINTS)
-                .anyMatch(p -> new MvcRequestMatcher(introspector, p).matches(request));
+        return Arrays.stream(SecurityConfiguration.PUBLIC_ENDPOINTS).anyMatch(
+                stringURI -> PathPatternRequestMatcher.withDefaults().matcher(stringURI).matches(request)
+        );
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         try {
 
-            String token = TokenUtils.recoveryToken(request.getHeader("Authorization")); // <-- CORRETO
+            String token = TokenUtils.recoveryToken(request.getHeader("Authorization"));
 
-            if (token != null) {
-                // 1. VERIFICAÇÃO NO BANCO: O token existe no banco de dados?
-                // Se não existir, o .orElseThrow() vai lançar uma exceção e o 'catch' abaixo vai tratar.
-                accessTokenRepository.findByToken(token)
-                        .orElseThrow(() -> new JWTVerificationException("Token invalidado (logout) ou não encontrado no banco de dados."));
-
-                // 2. VERIFICAÇÃO DO JWT: A assinatura e data do token são válidas?
-                var email = jwtTokenService.getSubjectFromToken(token);
-
-                // 3. AUTENTICAÇÃO: Carrega os detalhes do usuário e o autentica no sistema.
-                var userDetails = userDetailsService.loadUserByUsername(email);
-                var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+            if (token == null) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token nao encontrado no header");
             }
+
+            var accessToken = accessTokenRepository.findByToken(token)
+                    .orElse(null );
+
+            if (accessToken == null) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token não encontrado no banco de dados");
+            }
+
+            assert accessToken != null;
+            if (accessToken.getExpiredDate().isBefore(Instant.now())) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expirado");
+
+            }
+            var email = jwtTokenService.getSubjectFromToken(token);
+
+            var userDetails = userDetailsService.loadUserByUsername(email);
+            var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
             filterChain.doFilter(request, response);
 
         } catch (Exception e) {
-            // Se qualquer verificação falhar, o erro é capturado aqui.
             logger.error("Falha no filtro de segurança: " + e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Token inválido, expirado ou revogado.");

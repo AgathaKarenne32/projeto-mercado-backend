@@ -207,7 +207,7 @@ public class UserServiceImpl implements UserService {
         // 2. Verifica se a "senha atual" fornecida bate com a senha salva no banco.
         // O passwordEncoder.matches() compara a senha em texto plano com a senha criptografada.
         if (!encoder.matches(request.currentPassword(), currentUser.getPassword())) {
-            throw new BadCredentialsException(List.of(new FieldError("currentPassword", "A senha atual está incorreta."))); // TODO: Criar exceção customizada se preferir
+            throw new BadCredentialsException(List.of(new FieldError("currentPassword", "A senha atual está incorreta.")));
         }
 
         // 3. Verifica se a "nova senha" e a "confirmação" são iguais.
