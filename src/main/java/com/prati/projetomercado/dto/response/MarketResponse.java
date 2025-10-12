@@ -6,6 +6,7 @@ public record MarketResponse(
         Long id,
         String name,
         String city,
-        String state
+        String state,
+        String cnpj
 ) {
 }

@@ -31,7 +31,8 @@ public class MarketServiceImpl implements MarketService {
                     market.getId(),
                     market.getName(),
                     market.getCity(),
-                    market.getState()
+                    market.getState(),
+                    market.getCnpj()
             );
         }).toList();
     }
