@@ -2,15 +2,15 @@ package com.prati.projetomercado.filter;
 
 import com.prati.projetomercado.advice.ExceptionAdvice;
 import com.prati.projetomercado.config.SecurityConfiguration;
-import com.prati.projetomercado.config.UserDetailsImpl;
 import com.prati.projetomercado.repository.AccessTokenRepository;
-import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
+import com.prati.projetomercado.service.impl.UserDetailsServiceImpl;
 import com.prati.projetomercado.utils.TokenUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
@@ -22,75 +22,58 @@ import java.time.Instant;
 import java.util.Arrays;
 
 @Component
+@RequiredArgsConstructor
 public class UserAutenticationFilter extends OncePerRequestFilter {
 
-    private JwtTokenServiceImpl jwtTokenService;
-
-    private AuthUserRepository authUserRepository;
-    private AccessTokenRepository accessTokenRepository;
+    private final JwtTokenServiceImpl jwtTokenService;
+    private final UserDetailsServiceImpl userDetailsService;
+    private final AccessTokenRepository accessTokenRepository;
     private ExceptionAdvice advice;
-
-    public UserAutenticationFilter(ExceptionAdvice advice, AccessTokenRepository accessTokenRepository, AuthUserRepository authUserRepository, JwtTokenServiceImpl jwtTokenService) {
-        this.advice = advice;
-        this.accessTokenRepository = accessTokenRepository;
-        this.authUserRepository = authUserRepository;
-        this.jwtTokenService = jwtTokenService;
-    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        var permittedMatches = Arrays.stream(SecurityConfiguration.PUBLIC_ENDPOINTS);
-
-        var permitted = permittedMatches.anyMatch(stringURI-> PathPatternRequestMatcher.withDefaults().matcher(stringURI).matches(request));
-        return permitted;
-
+        return Arrays.stream(SecurityConfiguration.PUBLIC_ENDPOINTS).anyMatch(
+                stringURI -> PathPatternRequestMatcher.withDefaults().matcher(stringURI).matches(request)
+        );
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         try {
 
-        String token = recoveryToken(request);
+            String token = TokenUtils.recoveryToken(request.getHeader("Authorization"));
 
-        if (token == null) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No token found");
-        }
+            if (token == null) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token nao encontrado no header");
+            }
 
-        var subject = jwtTokenService.getSubjectFromToken(token);
-        var user = authUserRepository.findByEmail(subject).orElse(null);
-        if (user == null) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not found");
-            return;
-        }
-        var accessTokenFromRepo = accessTokenRepository.findByAuthUserAndToken(user, token).orElse(null);
+            var accessToken = accessTokenRepository.findByToken(token)
+                    .orElse(null);
 
-        if (accessTokenFromRepo == null) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No token found");
-        }
+            if (accessToken == null) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token não encontrado no banco de dados");
+            }
 
+            assert accessToken != null;
+            if (accessToken.getExpiredDate().isBefore(Instant.now())) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expirado");
 
-        if (accessTokenFromRepo.getExpiredDate().isBefore(Instant.now()))
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "accessToken expired");
+            }
+            var email = jwtTokenService.getSubjectFromToken(token);
 
-        var userDetails = new UserDetailsImpl(user);
+            var userDetails = userDetailsService.loadUserByUsername(email);
+            var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        var auth = new UsernamePasswordAuthenticationToken(userDetails.getUsername(), null, userDetails.getAuthorities());
+            filterChain.doFilter(request, response);
 
-        SecurityContextHolder.getContext().setAuthentication(auth);
-
-        filterChain.doFilter(request, response);
         } catch (Exception e) {
-            logger.error("spring security filter exception", e);
+            logger.error("Falha no filtro de segurança: ", e);
             advice.handleException(e);
         }
-    }
-
-    private String recoveryToken(HttpServletRequest request) {
-        String authorizationHeader = request.getHeader("Authorization");
-
-        return TokenUtils.recoveryToken(authorizationHeader);
     }
 
 }
