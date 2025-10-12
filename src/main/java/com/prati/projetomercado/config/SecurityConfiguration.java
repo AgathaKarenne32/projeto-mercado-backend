@@ -44,7 +44,8 @@ public class SecurityConfiguration {
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/auth/confirm-registration"
+            "/auth/confirm-registration",
+            "/auth/confirm-registration/**"
     };
 
     @Autowired

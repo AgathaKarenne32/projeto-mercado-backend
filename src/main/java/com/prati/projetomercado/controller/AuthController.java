@@ -4,6 +4,7 @@ package com.prati.projetomercado.controller;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
+import com.prati.projetomercado.dto.response.AuthResponse;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.service.UserService;
@@ -53,9 +54,9 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Credenciais inválidas ou conta não confirmada")
     })
     @PostMapping("/login")
-    public ResponseEntity<JwtToken> login(@RequestBody LoginUserRequest userRequest) throws Exception {
-        var jwtToken = userService.login(userRequest);
-        return new ResponseEntity<>(jwtToken, HttpStatus.OK);
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginUserRequest userRequest) throws Exception {
+        var authResponse= userService.login(userRequest);
+        return new ResponseEntity<>(authResponse, HttpStatus.OK);
     }
 
     @Operation(summary = "Realiza o logout do usuário", description = "Invalida o token de acesso (JWT) atual do usuário, apagando-o do banco de dados.")
