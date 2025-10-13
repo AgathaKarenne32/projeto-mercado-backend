@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,14 +61,18 @@ public class NfceController {
     public ResponseEntity<SuccessResponse<NfceResponse>> createNfceFromLink(@RequestHeader("Authorization") String authorization,
                                                                             @RequestBody UrlRequest request) {
         NfceResponse data = nfceService.createFromLink(authorization, request.getUrl());
-        return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal pelo link cadastrada com sucesso.", data));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new SuccessResponse<>("Nota fiscal pelo link cadastrada com sucesso.", data));
     }
 
     @PostMapping("/")
     public ResponseEntity<SuccessResponse<NfceResponse>> createNfceManually(@RequestHeader("Authorization") String authorization,
                                                                             @RequestBody NfceRequest manualData) {
         NfceResponse data = nfceService.createManually(authorization, manualData);
-        return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal manual cadastrada com sucesso.", data));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new SuccessResponse<>("Nota fiscal manual cadastrada com sucesso.", data));
     }
 
     @PutMapping("/{access-key}")
@@ -90,7 +95,7 @@ public class NfceController {
     public ResponseEntity<SuccessResponse<Void>> deleteNfce(@RequestHeader("Authorization") String authorization,
                                                             @PathVariable("access-key") String accessKey) {
         nfceService.delete(authorization, accessKey);
-        return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal deletada com sucesso."));
+        return ResponseEntity.noContent().build();
     }
 
     @Setter

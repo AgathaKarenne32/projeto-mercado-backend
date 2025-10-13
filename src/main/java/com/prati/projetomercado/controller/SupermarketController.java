@@ -5,6 +5,7 @@ import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.dto.response.SupermarketResponse;
 import com.prati.projetomercado.service.impl.SupermarketServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,7 +46,10 @@ public class SupermarketController {
     @PostMapping("/")
     public ResponseEntity<SuccessResponse<SupermarketResponse>> createSupermarket(@RequestHeader("Authorization") String authorization, @RequestBody SupermarketRequest supermarketData) {
         SupermarketResponse data = marketService.create(authorization, supermarketData);
-        return ResponseEntity.ok(new SuccessResponse<>("Supermercado cadastrado com sucesso.", data));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new SuccessResponse<>("Supermercado cadastrado com sucesso.", data));
+
     }
 
     @PutMapping("/{id}")
@@ -61,6 +65,6 @@ public class SupermarketController {
     public ResponseEntity<SuccessResponse<Void>> deleteSupermarket(@RequestHeader("Authorization") String authorization,
                                                                    @PathVariable long id) {
         marketService.delete(authorization, id);
-        return ResponseEntity.ok(new SuccessResponse<>("Supermercado deletado com sucesso."));
+        return ResponseEntity.noContent().build();
     }
 }
