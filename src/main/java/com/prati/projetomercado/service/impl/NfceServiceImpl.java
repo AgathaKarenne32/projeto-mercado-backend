@@ -1,4 +1,4 @@
-package com.prati.projetomercado.service.nfce;
+package com.prati.projetomercado.service.impl;
 
 import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
@@ -18,10 +18,10 @@ import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
 import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
-import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
+import com.prati.projetomercado.service.NfceService;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
 import com.prati.projetomercado.utils.TokenUtils;
-import com.prati.projetomercado.utils.scraper.IScraper;
+import com.prati.projetomercado.utils.scraper.Scraper;
 import com.prati.projetomercado.utils.scraper.StateGroup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,7 +36,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class NfceService {
+public class NfceServiceImpl implements NfceService {
 
     private final EntityBuilderUtils builder;
     private final AuthUserRepository userRepo;
@@ -46,7 +46,7 @@ public class NfceService {
     private final JwtTokenServiceImpl jwtTokenServiceImpl;
 
     @Transactional(readOnly = true)
-    public NfceResponse getOne(String accessToken, String accessKey) {
+    public NfceResponse findByAccessKey(String accessToken, String accessKey) {
         AuthUser user = getAuthenticatedUser(accessToken);
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
@@ -59,7 +59,7 @@ public class NfceService {
     }
 
     @Transactional(readOnly = true)
-    public List<NfceResponse> getAll(String accessToken) {
+    public List<NfceResponse> findAllByUser(String accessToken) {
         AuthUser user = getAuthenticatedUser(accessToken);
         List<Purchase> purchases = purchaseRepo.findAllByUser(user);
         List<NfceResponse> nfceList = new ArrayList<>();
@@ -73,26 +73,26 @@ public class NfceService {
     }
 
     @Transactional(readOnly = true)
-    public StatesResponse getStates(String accessToken) {
+    public StatesResponse getAvailableStates(String accessToken) {
         getAuthenticatedUser(accessToken);
         return new StatesResponse(StateGroup.getAllImplementedStates());
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public NfceResponse registerLink(String accessToken, String url) {
+    public NfceResponse createFromLink(String accessToken, String url) {
         String state = getStateFromUrl(url);
-        IScraper scraper = StateGroup.getScraperByState(state);
+        Scraper scraper = StateGroup.getScraperByState(state);
         NfceRequest nfceData = scraper.getData(url);
         return savePurchase(nfceData, accessToken, false);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public NfceResponse registerManual(String accessToken, NfceRequest nfceData) {
+    public NfceResponse createManually(String accessToken, NfceRequest nfceData) {
         return savePurchase(nfceData, accessToken, true);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public NfceResponse edit(String accessToken, String accessKey, NfceRequest nfceData) {
+    public NfceResponse update(String accessToken, String accessKey, NfceRequest nfceData) {
         AuthUser user = getAuthenticatedUser(accessToken);
 
         Purchase purchase = purchaseRepo.findByAccessKey(nfceData.accessKey())
@@ -120,7 +120,7 @@ public class NfceService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public NfceResponse patch(String accessToken, String accessKey, NfcePatchRequest patchData) {
+    public NfceResponse partialUpdate(String accessToken, String accessKey, NfcePatchRequest patchData) {
         AuthUser user = getAuthenticatedUser(accessToken);
 
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)

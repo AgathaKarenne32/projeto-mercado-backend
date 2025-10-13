@@ -9,16 +9,16 @@ public enum StateGroup {
     GROUP1(new ScraperGroup1(), List.of("RS", "SC", "SP")),
     GROUP2(new ScraperGroup2(), List.of("MG"));
 
-    private final IScraper scraper;
+    private final Scraper scraper;
     @Getter
     private final List<String> states;
 
-    StateGroup(IScraper scraper, List<String> states) {
+    StateGroup(Scraper scraper, List<String> states) {
         this.scraper = scraper;
         this.states = states;
     }
 
-    public static IScraper getScraperByState(String state) {
+    public static Scraper getScraperByState(String state) {
         for (StateGroup group : values()) {
             if (group.states.contains(state)) {
                 return group.scraper;
