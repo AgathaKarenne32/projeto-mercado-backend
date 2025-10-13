@@ -26,7 +26,7 @@ public class SupermarketController {
     private final SupermarketServiceImpl marketService;
 
     @GetMapping("/")
-    public ResponseEntity<SuccessResponse<List<SupermarketResponse>>> getAll(@RequestHeader("Authorization") String authorization) {
+    public ResponseEntity<SuccessResponse<List<SupermarketResponse>>> getAllSupermarkets(@RequestHeader("Authorization") String authorization) {
         List<SupermarketResponse> data = marketService.findAllByUser(authorization);
 
         if (data.isEmpty()) {
@@ -37,29 +37,29 @@ public class SupermarketController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SuccessResponse<SupermarketResponse>> getOne(@RequestHeader("Authorization") String authorization, @PathVariable long id) {
+    public ResponseEntity<SuccessResponse<SupermarketResponse>> getSupermarket(@RequestHeader("Authorization") String authorization, @PathVariable long id) {
         SupermarketResponse data = marketService.findById(authorization, id);
         return ResponseEntity.ok(new SuccessResponse<>("Supermercado encontrado com sucesso.", data));
     }
 
     @PostMapping("/")
-    public ResponseEntity<SuccessResponse<SupermarketResponse>> register(@RequestHeader("Authorization") String authorization, @RequestBody SupermarketRequest supermarketData) {
+    public ResponseEntity<SuccessResponse<SupermarketResponse>> createSupermarket(@RequestHeader("Authorization") String authorization, @RequestBody SupermarketRequest supermarketData) {
         SupermarketResponse data = marketService.create(authorization, supermarketData);
         return ResponseEntity.ok(new SuccessResponse<>("Supermercado cadastrado com sucesso.", data));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SuccessResponse<SupermarketResponse>> edit(@RequestHeader("Authorization") String authorization,
-                                                                     @PathVariable long id,
-                                                                     @RequestBody SupermarketRequest supermarketData) {
+    public ResponseEntity<SuccessResponse<SupermarketResponse>> updateSupermarket(@RequestHeader("Authorization") String authorization,
+                                                                                  @PathVariable long id,
+                                                                                  @RequestBody SupermarketRequest supermarketData) {
         SupermarketResponse data = marketService.update(authorization, id, supermarketData);
 
         return ResponseEntity.ok(new SuccessResponse<>("Supermercado editado com sucesso.", data));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<SuccessResponse<Void>> delete(@RequestHeader("Authorization") String authorization,
-                                                        @PathVariable long id) {
+    public ResponseEntity<SuccessResponse<Void>> deleteSupermarket(@RequestHeader("Authorization") String authorization,
+                                                                   @PathVariable long id) {
         marketService.delete(authorization, id);
         return ResponseEntity.ok(new SuccessResponse<>("Supermercado deletado com sucesso."));
     }
