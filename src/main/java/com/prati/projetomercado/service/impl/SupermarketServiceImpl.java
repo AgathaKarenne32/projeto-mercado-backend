@@ -5,9 +5,9 @@ import com.prati.projetomercado.dto.response.SupermarketResponse;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
-import com.prati.projetomercado.exceptions.EditNotAllowedException;
+import com.prati.projetomercado.exceptions.EntityDeletionException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
-import com.prati.projetomercado.exceptions.SupermarketDeletionException;
+import com.prati.projetomercado.exceptions.NotManualEntityException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.PurchaseRepository;
@@ -76,7 +76,7 @@ public class SupermarketServiceImpl implements SupermarketService {
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
 
         if (!supermarket.isManual()) {
-            throw new EditNotAllowedException("Supermercados registrados por link não podem ser editados");
+            throw new NotManualEntityException("Supermercados registrados pelo QR code não podem ser editados");
         }
 
         if (!supermarket.getCreatedByUser().getId().equals(user.getId())) {
@@ -99,7 +99,7 @@ public class SupermarketServiceImpl implements SupermarketService {
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
 
         if (!supermarket.isManual()) {
-            throw new UnauthorizedAccessException("Supermercados registrados por link não podem ser deletados");
+            throw new NotManualEntityException("Supermercados registrados pelo QR code não podem ser deletados");
         }
 
         if (!supermarket.getCreatedByUser().getId().equals(user.getId())) {
@@ -107,7 +107,7 @@ public class SupermarketServiceImpl implements SupermarketService {
         }
 
         if (purchaseRepo.findBySupermarket(supermarket).isPresent()) {
-            throw new SupermarketDeletionException("Não é possível deletar este supermercado porque existem notas fiscais associadas a ele.");
+            throw new EntityDeletionException("Não é possível deletar este supermercado porque existem notas fiscais associadas a ele.");
         }
 
         supermarketRepo.delete(supermarket);

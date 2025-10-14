@@ -10,9 +10,9 @@ import com.prati.projetomercado.entity.Item;
 import com.prati.projetomercado.entity.Purchase;
 import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
-import com.prati.projetomercado.exceptions.DuplicateNfceException;
-import com.prati.projetomercado.exceptions.EditNotAllowedException;
+import com.prati.projetomercado.exceptions.DuplicateEntityException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.NotManualEntityException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
@@ -99,7 +99,7 @@ public class NfceServiceImpl implements NfceService {
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.isManual()) {
-            throw new EditNotAllowedException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
+            throw new NotManualEntityException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
         }
 
         if (!purchase.getUser().getId().equals(user.getId())) {
@@ -127,7 +127,7 @@ public class NfceServiceImpl implements NfceService {
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.isManual()) {
-            throw new EditNotAllowedException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
+            throw new NotManualEntityException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
         }
 
         if (!purchase.getUser().getId().equals(user.getId())) {
@@ -167,7 +167,7 @@ public class NfceServiceImpl implements NfceService {
 
         purchaseRepo.findByAccessKey(nfceData.accessKey())
                 .ifPresent(p -> {
-                    throw new DuplicateNfceException("Nota fiscal já existe.");
+                    throw new DuplicateEntityException("Nota fiscal já existe.");
                 });
 
         Supermarket market;
