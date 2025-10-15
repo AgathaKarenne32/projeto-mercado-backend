@@ -5,10 +5,7 @@ import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.service.CatalogService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -23,6 +20,16 @@ public class CatalogController {
     @GetMapping("/{id}")
     public SuccessResponse<List<CatalogResponse>> getCatalogByMarket(@PathVariable("id") Long id) {
         return new SuccessResponse<>("Catalogo retornado com sucesso", catalogService.getCatalogByMarket(id));
+    }
+
+    @DeleteMapping("/{id}j")
+    public SuccessResponse<Void> deleteCatalog(@PathVariable("id") Long id) {
+        return new SuccessResponse<>("Item do catalogo deletado com sucesso!", null);
+    }
+
+    @PutMapping("/{id}")
+    public SuccessResponse<CatalogResponse> editCatalogItem(@PathVariable("id") Long id, String name) {
+        return new SuccessResponse<>("Catalogo editado com sucesso", catalogService.editCatalog(id, name));
     }
 
 }
