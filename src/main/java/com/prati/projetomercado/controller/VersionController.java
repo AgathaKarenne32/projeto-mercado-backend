@@ -1,8 +1,4 @@
-package com.prati.projetomercado.controller;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
+package com.prati.projetomercado.controller; import io.swagger.v3.oas.annotations.Operation; import io.swagger.v3.oas.annotations.responses.ApiResponse; import io.swagger.v3.oas.annotations.tags.Tag; import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +11,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/version")
+@RequiredArgsConstructor
 @Tag(name = "Versão", description = "Endpoint para verificar a versão da aplicação")
 public class VersionController {
 
-    // O Spring injeta automaticamente as propriedades de build que o Maven gerou
-    @Autowired
     private BuildProperties buildProperties;
 
     @Operation(summary = "Retorna a versão atual da aplicação",
