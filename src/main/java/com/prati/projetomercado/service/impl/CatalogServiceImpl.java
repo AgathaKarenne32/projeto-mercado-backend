@@ -1,12 +1,11 @@
-package com.prati.projetomercado.service;
+package com.prati.projetomercado.service.impl;
 
 import com.prati.projetomercado.dto.response.CatalogResponse;
-import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
 import com.prati.projetomercado.exceptions.FieldError;
 import com.prati.projetomercado.repository.CatalogRepository;
-import com.prati.projetomercado.repository.ItemRepository;
+import com.prati.projetomercado.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -37,7 +36,10 @@ public class CatalogServiceImpl implements CatalogService {
         var email = SecurityContextHolder.getContext().getAuthentication().getName();
         var catalog = catalogRepository.findCatalogoByIdAndSupermarket_CreatedByUser_Email(id, email)
                 .orElseThrow(() -> new EntityNotFoundException("catalogo não encontrado"));
-
+        if (!catalog.getSupermarket().isManual())
+            throw new BadCredentialsException(List.of(
+                    new FieldError("catalogId", "Não é possível editar catalogo inserido via link")
+            ));
         catalogRepository.delete(catalog);
     }
 
@@ -45,6 +47,11 @@ public class CatalogServiceImpl implements CatalogService {
         var email = SecurityContextHolder.getContext().getAuthentication().getName();
         var catalog = catalogRepository.findCatalogoByIdAndSupermarket_CreatedByUser_Email(id, email)
                 .orElseThrow(() -> new EntityNotFoundException("catalogo não encontrado"));
+
+        if (!catalog.getSupermarket().isManual())
+            throw new BadCredentialsException(List.of(
+                    new FieldError("catalogId", "Não é possível editar catalogo inserido via link")
+            ));
 
         catalog.setName(newName);
         catalogRepository.save(catalog);
