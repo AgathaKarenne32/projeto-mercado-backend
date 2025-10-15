@@ -2,10 +2,17 @@ package com.prati.projetomercado.controller;
 
 import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
+import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.dto.response.NfceResponse;
 import com.prati.projetomercado.dto.response.StatesResponse;
 import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.service.nfce.NfceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -27,11 +34,17 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/nfces")
 @RequiredArgsConstructor
-@Tag(name = "NFC-e", description = "Endpoints para processamento de Notas Fiscais de Consumidor Eletrônicas") // NOVO
+@Tag(name = "NFC-e", description = "Endpoints para gerenciamento de Notas Fiscais de Consumidor Eletrônicas de usuários")
+@SecurityRequirement(name = "bearerAuth")
 public class NfceController {
 
     private final NfceService nfceService;
 
+    @Operation(summary = "Lista todas as notas fiscais",
+            description = "Retorna uma lista de todas as notas fiscais do usuário autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de notas fiscais retornada com sucesso")
+    })
     @GetMapping("/")
     public ResponseEntity<SuccessResponse<List<NfceResponse>>> getAll(@RequestHeader("Authorization") String authorization) {
         List<NfceResponse> data = nfceService.getAll(authorization);
@@ -43,6 +56,14 @@ public class NfceController {
         return ResponseEntity.ok(new SuccessResponse<>("Notas fiscais encontradas com sucesso.", data));
     }
 
+    @Operation(summary = "Busca uma nota fiscal pela chave de acesso",
+            description = "Retorna os detalhes de um nota fiscal específica do usuário autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Nota fiscal encontrada com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Nota fiscal não encontrada",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))})
+    })
     @GetMapping("/{access-key}")
     public ResponseEntity<SuccessResponse<NfceResponse>> getOne(@RequestHeader("Authorization") String authorization,
                                                                 @PathVariable("access-key") String accessKey) {
@@ -50,12 +71,31 @@ public class NfceController {
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal encontrada com sucesso.", data));
     }
 
+    @Operation(summary = "Lista todos os estados",
+            description = "Retorna uma lista dos estados implementados.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de estados implementados retornada com sucesso")
+    })
     @GetMapping("/states")
     public ResponseEntity<SuccessResponse<StatesResponse>> getStates(@RequestHeader("Authorization") String authorization) {
         StatesResponse data = nfceService.getStates(authorization);
         return ResponseEntity.ok(new SuccessResponse<>("Lista de estados implementados encontrada com sucesso.", data));
     }
 
+    @Operation(summary = "Cria uma nova nota fiscal pelo link",
+            description = "Cria um nova nota fiscal pelo link associada ao usuário autenticado e retorna o objeto da nota fiscal criada.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Nota fiscal criada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Requisição não pôde ser processada devido a URL inválida ou falha na extração de dados da página",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "404", description = "Supermercado não encontrado",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "409", description = "Nota fisca já existe",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))})
+    })
     @PostMapping("/from-url")
     public ResponseEntity<SuccessResponse<NfceResponse>> registerLink(@RequestHeader("Authorization") String authorization,
                                                                       @RequestBody UrlRequest request) {
@@ -63,6 +103,17 @@ public class NfceController {
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal pelo link cadastrada com sucesso.", data));
     }
 
+    @Operation(summary = "Cria uma nova nota fiscal manual",
+            description = "Cria um nova nota fiscal manual associada ao usuário autenticado e retorna o objeto da nota fiscal criada.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Nota fiscal criada com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Supermercado não encontrado",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "409", description = "Nota fisca já existe",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))})
+    })
     @PostMapping("/")
     public ResponseEntity<SuccessResponse<NfceResponse>> registerManual(@RequestHeader("Authorization") String authorization,
                                                                         @RequestBody NfceRequest manualData) {
@@ -70,6 +121,21 @@ public class NfceController {
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal manual cadastrada com sucesso.", data));
     }
 
+    @Operation(summary = "Atualiza uma nota fiscal",
+            description = "Atualiza as informações de uma nota fiscal com base na chave de acesso e retorna o objeto da nota fiscal atualizada.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Nota fiscal atualizada com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Você não tem permissão para editar esta nota fiscal",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "404", description = "Nota fiscal não encontrada",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation =
+                                    ErrorResponse.class))}),
+            @ApiResponse(responseCode = "409", description = "Notas fiscais registradas por QR code não podem ser editadas",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))})
+    })
     @PutMapping("/{access-key}")
     public ResponseEntity<SuccessResponse<NfceResponse>> edit(@RequestHeader("Authorization") String authorization,
                                                               @PathVariable("access-key") String accessKey,
@@ -78,6 +144,21 @@ public class NfceController {
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal editada com sucesso.", data));
     }
 
+    @Operation(summary = "Atualiza parcialmente uma nota fiscal",
+            description = "Atualiza parcialmente os campos de uma nota fiscal com base na chave de acesso e retorna o objeto da nota fiscal atualizada.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Nota fiscal atualizada com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Você não tem permissão para editar esta nota fiscal",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "404", description = "Nota fiscal não encontrada",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation =
+                                    ErrorResponse.class))}),
+            @ApiResponse(responseCode = "409", description = "Notas fiscais registradas por QR code não podem ser editadas",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))})
+    })
     @PatchMapping("/{access-key}")
     public ResponseEntity<SuccessResponse<NfceResponse>> patch(@RequestHeader("Authorization") String authorization,
                                                                @PathVariable("access-key") String accessKey,
@@ -86,6 +167,17 @@ public class NfceController {
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal editada com sucesso.", data));
     }
 
+    @Operation(summary = "Remove uma nota fiscal",
+            description = "Remove permanentemente uma nota fiscal com base na chave de acesso.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Nota fiscal deletada com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Você não tem permissão para deletar esta nota fiscal",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "404", description = "Nota fiscal não encontrada",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))})
+    })
     @DeleteMapping("/{access-key}")
     public ResponseEntity<SuccessResponse<Void>> delete(@RequestHeader("Authorization") String authorization,
                                                         @PathVariable("access-key") String accessKey) {
