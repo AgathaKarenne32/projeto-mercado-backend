@@ -6,7 +6,6 @@ import com.prati.projetomercado.security.oauth2.HttpCookieOAuth2AuthorizationReq
 import com.prati.projetomercado.security.oauth2.handlers.OAuth2AuthSuccessHandler;
 import com.prati.projetomercado.service.impl.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -26,6 +25,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+
 import java.util.List;
 
 @Configuration
@@ -43,11 +43,9 @@ public class SecurityConfiguration {
             "/oauth2/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
-            "/v3/api-docs/**"
-    };
-
-    public static final String[] AUTH_REQUIRED_ENDPOINTS = {
-            "/auth/test-autenticated",
+            "/v3/api-docs/**",
+            "/auth/confirm-registration",
+            "/auth/confirm-registration/**"
     };
 
     @Autowired
@@ -101,13 +99,6 @@ public class SecurityConfiguration {
         return source;
     }
 
-    @Bean
-    public FilterRegistrationBean<UserAutenticationFilter> userAutenticationFilterFilterRegistrationBean() {
-        FilterRegistrationBean<UserAutenticationFilter> filter = new FilterRegistrationBean<>();
-        filter.setFilter(userAutenticationFilter);
-        filter.addUrlPatterns(AUTH_REQUIRED_ENDPOINTS);
-        return filter;
-    }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {

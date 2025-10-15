@@ -27,4 +27,5 @@ public interface RascunhoRepository extends JpaRepository<Rascunho, Long> {
 
     void deleteRascunhoByUserAndId(AuthUser user, Long id);
 
+    List<Rascunho> getRascunhoByUserAndId(AuthUser user, Long id);
 }

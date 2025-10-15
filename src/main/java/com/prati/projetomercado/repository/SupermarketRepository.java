@@ -8,8 +8,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SupermarketRepository extends JpaRepository<Supermarket, Long> {
-    Optional<Supermarket> findByCnpjAndCreatedByUser(String cnpj, AuthUser createdByUser);
+    Optional<Supermarket> findByCnpjAndManual(String cnpj, Boolean isManual);
 
-    List<Supermarket> findAllByCreatedByUser(AuthUser createdByUser);
+    Optional<Supermarket> findByIdAndCreatedByUserAndManual(Long id, AuthUser createdByUser, Boolean isManual);
 
+    List<Supermarket> findAllByCreatedByUser(AuthUser user);
 }

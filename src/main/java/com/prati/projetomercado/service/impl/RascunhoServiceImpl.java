@@ -80,6 +80,10 @@ public class RascunhoServiceImpl implements RascunhoService {
 
     @Override
     public void apagarRascunho(Long rascunhoId) {
-        rascunhoRepository.deleteRascunhoByUserAndId(getUsuarioAutenticado(), rascunhoId);
+        System.out.println("pegando rascunho");
+        var rascunho = rascunhoRepository.getRascunhoByUserAndId(getUsuarioAutenticado(), rascunhoId);
+        System.out.println("rascunho pegod");
+        rascunhoRepository.delete(rascunho.getFirst());
+//        rascunhoRepository.deleteRascunhoByUserAndId(getUsuarioAutenticado(), rascunhoId);
     }
 }
