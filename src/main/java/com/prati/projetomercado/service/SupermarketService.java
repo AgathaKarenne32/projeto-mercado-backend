@@ -6,13 +6,13 @@ import com.prati.projetomercado.dto.response.SupermarketResponse;
 import java.util.List;
 
 public interface SupermarketService {
-    SupermarketResponse findById(String accessToken, long id);
+    SupermarketResponse findById(Long id);
 
-    List<SupermarketResponse> findAllByUser(String accessToken);
+    List<SupermarketResponse> findAllByUser();
 
-    SupermarketResponse create(String accessToken, SupermarketRequest supermarketData);
+    SupermarketResponse create(SupermarketRequest supermarketData);
 
-    SupermarketResponse update(String accessToken, long id, SupermarketRequest supermarketData);
+    SupermarketResponse update(Long id, SupermarketRequest supermarketData);
 
-    void delete(String accessToken, long id);
+    void delete(Long id);
 }

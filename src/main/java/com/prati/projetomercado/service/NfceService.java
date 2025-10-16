@@ -8,19 +8,19 @@ import com.prati.projetomercado.dto.response.StatesResponse;
 import java.util.List;
 
 public interface NfceService {
-    NfceResponse findByAccessKey(String accessToken, String accessKey);
+    NfceResponse findByAccessKey(String accessKey);
 
-    List<NfceResponse> findAllByUser(String accessToken);
+    List<NfceResponse> findAllByUser();
 
-    StatesResponse getAvailableStates(String accessToken);
+    StatesResponse getAvailableStates();
 
-    NfceResponse createFromLink(String accessToken, String url);
+    NfceResponse createFromLink(String url);
 
-    NfceResponse createManually(String accessToken, NfceRequest nfceData);
+    NfceResponse createManually(NfceRequest nfceData);
 
-    NfceResponse update(String accessToken, String accessKey, NfceRequest nfceData);
+    NfceResponse update(String accessKey, NfceRequest nfceData);
 
-    NfceResponse partialUpdate(String accessToken, String accessKey, NfcePatchRequest patchData);
+    NfceResponse partialUpdate(String accessKey, NfcePatchRequest patchData);
 
-    void delete(String accessToken, String accessKey);
+    void delete(String accessKey);
 }

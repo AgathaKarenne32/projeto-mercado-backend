@@ -21,10 +21,10 @@ import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
 import com.prati.projetomercado.service.NfceService;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
-import com.prati.projetomercado.utils.TokenUtils;
 import com.prati.projetomercado.utils.scraper.Scraper;
 import com.prati.projetomercado.utils.scraper.StateGroup;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,11 +44,11 @@ public class NfceServiceImpl implements NfceService {
     private final SupermarketRepository supermarketRepo;
     private final PurchaseRepository purchaseRepo;
     private final CatalogRepository catalogRepo;
-    private final JwtTokenServiceImpl jwtTokenServiceImpl;
 
+    @Override
     @Transactional(readOnly = true)
-    public NfceResponse findByAccessKey(String accessToken, String accessKey) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    public NfceResponse findByAccessKey(String accessKey) {
+        AuthUser user = getAuthenticatedUser();
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
@@ -59,9 +59,10 @@ public class NfceServiceImpl implements NfceService {
         return NfceResponse.toDto(purchase);
     }
 
+    @Override
     @Transactional(readOnly = true)
-    public List<NfceResponse> findAllByUser(String accessToken) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    public List<NfceResponse> findAllByUser() {
+        AuthUser user = getAuthenticatedUser();
         List<Purchase> purchases = purchaseRepo.findAllByUser(user);
         List<NfceResponse> nfceList = new ArrayList<>();
 
@@ -73,30 +74,33 @@ public class NfceServiceImpl implements NfceService {
         return nfceList;
     }
 
+    @Override
     @Transactional(readOnly = true)
-    public StatesResponse getAvailableStates(String accessToken) {
-        getAuthenticatedUser(accessToken);
+    public StatesResponse getAvailableStates() {
         return new StatesResponse(StateGroup.getAllImplementedStates());
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public NfceResponse createFromLink(String accessToken, String url) {
+    @Override
+    @Transactional()
+    public NfceResponse createFromLink(String url) {
         String state = getStateFromUrl(url);
         Scraper scraper = StateGroup.getScraperByState(state);
         NfceRequest nfceData = scraper.getData(url);
-        return savePurchase(nfceData, accessToken, false);
+        return savePurchase(nfceData, false);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public NfceResponse createManually(String accessToken, NfceRequest nfceData) {
-        return savePurchase(nfceData, accessToken, true);
+    @Override
+    @Transactional()
+    public NfceResponse createManually(NfceRequest nfceData) {
+        return savePurchase(nfceData, true);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public NfceResponse update(String accessToken, String accessKey, NfceRequest nfceData) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public NfceResponse update(String accessKey, NfceRequest nfceData) {
+        AuthUser user = getAuthenticatedUser();
 
-        Purchase purchase = purchaseRepo.findByAccessKey(nfceData.accessKey())
+        Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.isManual()) {
@@ -120,9 +124,10 @@ public class NfceServiceImpl implements NfceService {
         return NfceResponse.toDto(purchase);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public NfceResponse partialUpdate(String accessToken, String accessKey, NfcePatchRequest patchData) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public NfceResponse partialUpdate(String accessKey, NfcePatchRequest patchData) {
+        AuthUser user = getAuthenticatedUser();
 
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
@@ -149,9 +154,10 @@ public class NfceServiceImpl implements NfceService {
         return NfceResponse.toDto(purchase);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void delete(String accessToken, String accessKey) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public void delete(String accessKey) {
+        AuthUser user = getAuthenticatedUser();
 
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
@@ -163,8 +169,8 @@ public class NfceServiceImpl implements NfceService {
         purchaseRepo.delete(purchase);
     }
 
-    private NfceResponse savePurchase(NfceRequest nfceData, String accessToken, boolean isManual) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    private NfceResponse savePurchase(NfceRequest nfceData, boolean isManual) {
+        AuthUser user = getAuthenticatedUser();
 
         purchaseRepo.findByAccessKey(nfceData.accessKey())
                 .ifPresent(p -> {
@@ -215,10 +221,10 @@ public class NfceServiceImpl implements NfceService {
         return NfceResponse.toDto(purchase);
     }
 
-    private AuthUser getAuthenticatedUser(String accessToken) {
-        var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
+    private AuthUser getAuthenticatedUser() {
+        var email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepo.findByEmail(email)
-                .orElseThrow(() -> new AuthException("Usuário não encontrado."));
+                .orElseThrow(() -> new AuthException("Usuário autenticado não encontrado no banco de dados."));
     }
 
     public String getStateFromUrl(String url) {

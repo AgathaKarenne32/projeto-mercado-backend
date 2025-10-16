@@ -14,8 +14,8 @@ import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
 import com.prati.projetomercado.service.SupermarketService;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
-import com.prati.projetomercado.utils.TokenUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,11 +30,17 @@ public class SupermarketServiceImpl implements SupermarketService {
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
     private final PurchaseRepository purchaseRepo;
-    private final JwtTokenServiceImpl jwtTokenServiceImpl;
 
+    private AuthUser getAuthenticatedUser() {
+        var email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepo.findByEmail(email)
+                .orElseThrow(() -> new AuthException("Usuário autenticado não encontrado no banco de dados."));
+    }
+
+    @Override
     @Transactional(readOnly = true)
-    public SupermarketResponse findById(String accessToken, long id) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    public SupermarketResponse findById(Long id) {
+        AuthUser user = getAuthenticatedUser();
         Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
 
@@ -45,9 +51,10 @@ public class SupermarketServiceImpl implements SupermarketService {
         return SupermarketResponse.toDto(supermarket);
     }
 
+    @Override
     @Transactional(readOnly = true)
-    public List<SupermarketResponse> findAllByUser(String accessToken) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    public List<SupermarketResponse> findAllByUser() {
+        AuthUser user = getAuthenticatedUser();
         List<Supermarket> supermarkets = supermarketRepo.findAllByCreatedByUser(user);
         List<SupermarketResponse> supermarketList = new ArrayList<>();
 
@@ -59,18 +66,20 @@ public class SupermarketServiceImpl implements SupermarketService {
         return supermarketList;
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public SupermarketResponse create(String accessToken, SupermarketRequest supermarketData) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public SupermarketResponse create(SupermarketRequest supermarketData) {
+        AuthUser user = getAuthenticatedUser();
 
         Supermarket market = supermarketRepo.save(builder.buildSupermarket(supermarketData, user, true));
 
         return SupermarketResponse.toDto(market);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public SupermarketResponse update(String accessToken, long id, SupermarketRequest supermarketData) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public SupermarketResponse update(Long id, SupermarketRequest supermarketData) {
+        AuthUser user = getAuthenticatedUser();
 
         Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
@@ -91,9 +100,10 @@ public class SupermarketServiceImpl implements SupermarketService {
         return SupermarketResponse.toDto(supermarket);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void delete(String accessToken, long id) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public void delete(Long id) {
+        AuthUser user = getAuthenticatedUser();
 
         Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
@@ -111,11 +121,5 @@ public class SupermarketServiceImpl implements SupermarketService {
         }
 
         supermarketRepo.delete(supermarket);
-    }
-
-    private AuthUser getAuthenticatedUser(String accessToken) {
-        var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
-        return userRepo.findByEmail(email)
-                .orElseThrow(() -> new AuthException("Usuário não encontrado."));
     }
 }

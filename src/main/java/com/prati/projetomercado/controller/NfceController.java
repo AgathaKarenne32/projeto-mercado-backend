@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,14 +27,14 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/nfces")
 @RequiredArgsConstructor
-@Tag(name = "NFC-e", description = "Endpoints para processamento de Notas Fiscais de Consumidor Eletrônicas") // NOVO
+@Tag(name = "NFC-e", description = "Endpoints para processamento de Notas Fiscais de Consumidor Eletrônicas")
 public class NfceController {
 
     private final NfceServiceImpl nfceService;
 
     @GetMapping("/")
-    public ResponseEntity<SuccessResponse<List<NfceResponse>>> getAllNfces(@RequestHeader("Authorization") String authorization) {
-        List<NfceResponse> data = nfceService.findAllByUser(authorization);
+    public ResponseEntity<SuccessResponse<List<NfceResponse>>> getAllNfces() {
+        List<NfceResponse> data = nfceService.findAllByUser();
 
         if (data.isEmpty()) {
             return ResponseEntity.ok(new SuccessResponse<>("Nenhuma nota fiscal encontrada."));
@@ -45,56 +44,48 @@ public class NfceController {
     }
 
     @GetMapping("/{access-key}")
-    public ResponseEntity<SuccessResponse<NfceResponse>> getNfce(@RequestHeader("Authorization") String authorization,
-                                                                 @PathVariable("access-key") String accessKey) {
-        NfceResponse data = nfceService.findByAccessKey(authorization, accessKey);
+    public ResponseEntity<SuccessResponse<NfceResponse>> getNfce(@PathVariable("access-key") String accessKey) {
+        NfceResponse data = nfceService.findByAccessKey(accessKey);
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal encontrada com sucesso.", data));
     }
 
     @GetMapping("/states")
-    public ResponseEntity<SuccessResponse<StatesResponse>> getAvailableStates(@RequestHeader("Authorization") String authorization) {
-        StatesResponse data = nfceService.getAvailableStates(authorization);
+    public ResponseEntity<SuccessResponse<StatesResponse>> getAvailableStates() {
+        StatesResponse data = nfceService.getAvailableStates();
         return ResponseEntity.ok(new SuccessResponse<>("Lista de estados implementados encontrada com sucesso.", data));
     }
 
     @PostMapping("/from-url")
-    public ResponseEntity<SuccessResponse<NfceResponse>> createNfceFromLink(@RequestHeader("Authorization") String authorization,
-                                                                            @RequestBody UrlRequest request) {
-        NfceResponse data = nfceService.createFromLink(authorization, request.getUrl());
+    public ResponseEntity<SuccessResponse<NfceResponse>> createNfceFromLink(@RequestBody UrlRequest request) {
+        NfceResponse data = nfceService.createFromLink(request.getUrl());
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new SuccessResponse<>("Nota fiscal pelo link cadastrada com sucesso.", data));
     }
 
     @PostMapping("/")
-    public ResponseEntity<SuccessResponse<NfceResponse>> createNfceManually(@RequestHeader("Authorization") String authorization,
-                                                                            @RequestBody NfceRequest manualData) {
-        NfceResponse data = nfceService.createManually(authorization, manualData);
+    public ResponseEntity<SuccessResponse<NfceResponse>> createNfceManually(@RequestBody NfceRequest manualData) {
+        NfceResponse data = nfceService.createManually(manualData);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new SuccessResponse<>("Nota fiscal manual cadastrada com sucesso.", data));
     }
 
     @PutMapping("/{access-key}")
-    public ResponseEntity<SuccessResponse<NfceResponse>> updateNfce(@RequestHeader("Authorization") String authorization,
-                                                                    @PathVariable("access-key") String accessKey,
-                                                                    @RequestBody NfceRequest updatedNfce) {
-        NfceResponse data = nfceService.update(authorization, accessKey, updatedNfce);
+    public ResponseEntity<SuccessResponse<NfceResponse>> updateNfce(@PathVariable("access-key") String accessKey, @RequestBody NfceRequest updatedNfce) {
+        NfceResponse data = nfceService.update(accessKey, updatedNfce);
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal editada com sucesso.", data));
     }
 
     @PatchMapping("/{access-key}")
-    public ResponseEntity<SuccessResponse<NfceResponse>> partialUpdateNfce(@RequestHeader("Authorization") String authorization,
-                                                                           @PathVariable("access-key") String accessKey,
-                                                                           @RequestBody NfcePatchRequest patchNfce) {
-        NfceResponse data = nfceService.partialUpdate(authorization, accessKey, patchNfce);
+    public ResponseEntity<SuccessResponse<NfceResponse>> partialUpdateNfce(@PathVariable("access-key") String accessKey, @RequestBody NfcePatchRequest patchNfce) {
+        NfceResponse data = nfceService.partialUpdate(accessKey, patchNfce);
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal editada com sucesso.", data));
     }
 
     @DeleteMapping("/{access-key}")
-    public ResponseEntity<SuccessResponse<Void>> deleteNfce(@RequestHeader("Authorization") String authorization,
-                                                            @PathVariable("access-key") String accessKey) {
-        nfceService.delete(authorization, accessKey);
+    public ResponseEntity<SuccessResponse<Void>> deleteNfce(@PathVariable("access-key") String accessKey) {
+        nfceService.delete(accessKey);
         return ResponseEntity.noContent().build();
     }
 

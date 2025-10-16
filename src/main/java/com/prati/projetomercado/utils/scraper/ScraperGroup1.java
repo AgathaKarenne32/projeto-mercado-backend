@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 @Component
 public class ScraperGroup1 implements Scraper {
 
+    @Override
     public NfceRequest scrape(String url) throws IOException {
         Document doc = Jsoup.connect(url).get();
         List<NfceRequest.Item> products = new ArrayList<>();

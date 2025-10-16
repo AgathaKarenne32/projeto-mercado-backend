@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,8 +26,8 @@ public class SupermarketController {
     private final SupermarketServiceImpl marketService;
 
     @GetMapping("/")
-    public ResponseEntity<SuccessResponse<List<SupermarketResponse>>> getAllSupermarkets(@RequestHeader("Authorization") String authorization) {
-        List<SupermarketResponse> data = marketService.findAllByUser(authorization);
+    public ResponseEntity<SuccessResponse<List<SupermarketResponse>>> getAllSupermarkets() {
+        List<SupermarketResponse> data = marketService.findAllByUser();
 
         if (data.isEmpty()) {
             return ResponseEntity.ok(new SuccessResponse<>("Nenhum mercado encontrado."));
@@ -38,14 +37,14 @@ public class SupermarketController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SuccessResponse<SupermarketResponse>> getSupermarket(@RequestHeader("Authorization") String authorization, @PathVariable long id) {
-        SupermarketResponse data = marketService.findById(authorization, id);
+    public ResponseEntity<SuccessResponse<SupermarketResponse>> getSupermarket(@PathVariable long id) {
+        SupermarketResponse data = marketService.findById(id);
         return ResponseEntity.ok(new SuccessResponse<>("Supermercado encontrado com sucesso.", data));
     }
 
     @PostMapping("/")
-    public ResponseEntity<SuccessResponse<SupermarketResponse>> createSupermarket(@RequestHeader("Authorization") String authorization, @RequestBody SupermarketRequest supermarketData) {
-        SupermarketResponse data = marketService.create(authorization, supermarketData);
+    public ResponseEntity<SuccessResponse<SupermarketResponse>> createSupermarket(@RequestBody SupermarketRequest supermarketData) {
+        SupermarketResponse data = marketService.create(supermarketData);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new SuccessResponse<>("Supermercado cadastrado com sucesso.", data));
@@ -53,18 +52,15 @@ public class SupermarketController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SuccessResponse<SupermarketResponse>> updateSupermarket(@RequestHeader("Authorization") String authorization,
-                                                                                  @PathVariable long id,
-                                                                                  @RequestBody SupermarketRequest supermarketData) {
-        SupermarketResponse data = marketService.update(authorization, id, supermarketData);
+    public ResponseEntity<SuccessResponse<SupermarketResponse>> updateSupermarket(@PathVariable long id, @RequestBody SupermarketRequest supermarketData) {
+        SupermarketResponse data = marketService.update(id, supermarketData);
 
         return ResponseEntity.ok(new SuccessResponse<>("Supermercado editado com sucesso.", data));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<SuccessResponse<Void>> deleteSupermarket(@RequestHeader("Authorization") String authorization,
-                                                                   @PathVariable long id) {
-        marketService.delete(authorization, id);
+    public ResponseEntity<SuccessResponse<Void>> deleteSupermarket(@PathVariable long id) {
+        marketService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

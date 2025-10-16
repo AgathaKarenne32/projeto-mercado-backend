@@ -39,6 +39,7 @@ public class ScraperGroup2 implements Scraper {
         );
     }
 
+    @Override
     public NfceRequest scrape(String url) throws IOException {
         Document doc = Jsoup.connect(url).get();
         List<NfceRequest.Item> products = new ArrayList<>();
