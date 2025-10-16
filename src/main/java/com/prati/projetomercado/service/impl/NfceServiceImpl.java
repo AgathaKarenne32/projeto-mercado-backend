@@ -12,6 +12,7 @@ import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.DuplicateEntityException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.NfceUrlParseException;
 import com.prati.projetomercado.exceptions.NotManualEntityException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import com.prati.projetomercado.repository.AuthUserRepository;
@@ -227,7 +228,7 @@ public class NfceServiceImpl implements NfceService {
             String host = uri.getHost();
 
             if (host == null) {
-                throw new IllegalArgumentException("Host inválido.");
+                throw new NfceUrlParseException("Host inválido.");
             }
 
             String[] parts = host.split("\\.");
@@ -236,10 +237,10 @@ public class NfceServiceImpl implements NfceService {
                 return parts[parts.length - 3].toUpperCase();
             }
 
-            throw new IllegalArgumentException("Estado não encontrado na URL");
+            throw new NfceUrlParseException("Estado não encontrado na URL");
 
         } catch (URISyntaxException ex) {
-            throw new IllegalArgumentException("URL inválida para extrair o estado");
+            throw new NfceUrlParseException("URL inválida para extrair o estado");
         }
     }
 }

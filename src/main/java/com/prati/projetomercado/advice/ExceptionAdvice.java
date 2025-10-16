@@ -6,6 +6,8 @@ import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.DuplicateEntityException;
 import com.prati.projetomercado.exceptions.EntityDeletionException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.NfceScrapeException;
+import com.prati.projetomercado.exceptions.NfceUrlParseException;
 import com.prati.projetomercado.exceptions.NotManualEntityException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import org.springframework.core.Ordered;
@@ -57,9 +59,19 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
             EntityDeletionException.class,
             NotManualEntityException.class
     })
-    public ResponseEntity<Object> handleConflictExceptions(RuntimeException ex) {
+    public ResponseEntity<ErrorResponse> handleEntityConflictExceptions(RuntimeException ex) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler({
+            NfceScrapeException.class,
+            NfceUrlParseException.class
+    })
+    public ResponseEntity<ErrorResponse> handleNfceBadRequestExceptions(RuntimeException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 }
