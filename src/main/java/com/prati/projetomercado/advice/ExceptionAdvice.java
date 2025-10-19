@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
+import org.springframework.http.HttpStatus;
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -56,5 +58,11 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
     @ExceptionHandler(SupermarketDeletionException.class)
     public ResponseEntity<Object> handleSupermarketDeletion(SupermarketDeletionException ex) {
         return ResponseEntity.status(409).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 }
