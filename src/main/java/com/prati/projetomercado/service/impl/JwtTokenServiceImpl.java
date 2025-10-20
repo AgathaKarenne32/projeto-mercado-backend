@@ -7,20 +7,37 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.prati.projetomercado.config.UserDetailsImpl;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.RefreshToken;
+import com.prati.projetomercado.repository.AccessTokenRepository;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Set;
 import java.util.HashSet;
+import org.springframework.beans.factory.annotation.Value;
 
 
 @Service
 public class JwtTokenServiceImpl {
-    //TODO colocar secret key em um arquivo a parte
-    public static final String SECRET_KEY = "MUDAR_DEPOIS";
+    @Value("${jwt.secret}")
+    private String SECRET_KEY;
 
-    public static final String ISSUER = "prati-projeto-mercado";
+    @Value("${jwt.issuer}")
+    private String ISSUER;
+
+    @Value("${jwt.expiration.access-token.hours}")
+    private int ACCESS_TOKEN_EXPIRATION_HOURS;
+
+    @Value("${jwt.expiration.refresh-token.hours}")
+    private int REFRESH_TOKEN_EXPIRATION_HOURS;
+
+    private final AccessTokenRepository accessTokenRepository;
+
+    private final Set<String> blacklist = new HashSet<>();
+
+    public JwtTokenServiceImpl(AccessTokenRepository accessTokenRepository) {
+        this.accessTokenRepository = accessTokenRepository;
+    }
 
     public String generateToken(AuthUser authUser, Instant expirationDate) {
         try {
@@ -46,31 +63,32 @@ public class JwtTokenServiceImpl {
             var algorithm = Algorithm.HMAC256(SECRET_KEY);
             return JWT.require(algorithm).withIssuer(ISSUER).build().verify(token).getSubject();
         } catch (JWTVerificationException e) {
-            e.printStackTrace();
             throw new JWTVerificationException("Invalid/expired token");
             
         }
     }
     
     public Instant creationDate() {
+
         return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).toInstant();
     }
 
     public Instant expirationAccessTokenDate() {
-        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusHours(1).toInstant();
+        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusHours(ACCESS_TOKEN_EXPIRATION_HOURS).toInstant();
     }
 
     public RefreshToken generateNewRefreshToken(AuthUser user){
         var refreshToken = new RefreshToken();
         refreshToken.setAuthUser(user);
-        refreshToken.setExpiresAt(Instant.now().plusSeconds(3600 * 12));
+        refreshToken.setExpiresAt(Instant.now().plusSeconds(3600L * REFRESH_TOKEN_EXPIRATION_HOURS));
         return refreshToken;
     }
 
-    private final Set<String> blacklist = new HashSet<>();
-
     public void invalidateToken(String token) {
         blacklist.add(token);
+
+        accessTokenRepository.findByToken(token)
+                .ifPresent(accessTokenRepository::delete);
     }
 
     public boolean isTokenInvalid(String token) {
