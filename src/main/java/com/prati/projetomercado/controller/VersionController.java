@@ -1,0 +1,36 @@
+package com.prati.projetomercado.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.info.BuildProperties;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/version")
+@Tag(name = "Versão", description = "Endpoint para verificar a versão da aplicação")
+public class VersionController {
+
+    // O Spring injeta automaticamente as propriedades de build que o Maven gerou
+    @Autowired
+    private BuildProperties buildProperties;
+
+    @Operation(summary = "Retorna a versão atual da aplicação",
+            description = "Verifica a versão definida no pom.xml do projeto.")
+    @ApiResponse(responseCode = "200", description = "Versão retornada com sucesso")
+    @GetMapping
+    public ResponseEntity<Map<String, String>> getVersion() {
+        Map<String, String> versionInfo = new HashMap<>();
+        versionInfo.put("version", buildProperties.getVersion());
+        versionInfo.put("buildTime", buildProperties.getTime().toString());
+
+        return ResponseEntity.ok(versionInfo);
+    }
+}
