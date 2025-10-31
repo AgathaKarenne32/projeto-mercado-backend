@@ -45,7 +45,7 @@ public class SupermarketController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de supermercados retornada com sucesso")
     })
-    @GetMapping("/")
+    @GetMapping()
     public ResponseEntity<SuccessResponse<List<SupermarketResponse>>> getAll(
             @RequestHeader("Authorization") String authorization,
             @RequestParam(defaultValue = "0") int page,
@@ -75,7 +75,7 @@ public class SupermarketController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Supermercado criado com sucesso")
     })
-    @PostMapping("/")
+    @PostMapping()
     public ResponseEntity<SuccessResponse<SupermarketResponse>> register(@RequestHeader("Authorization") String authorization, @RequestBody SupermarketRequest supermarketData) {
         SupermarketResponse data = marketService.saveSupermarket(authorization, supermarketData);
         return ResponseEntity.ok(new SuccessResponse<>("Supermercado cadastrado com sucesso.", data));

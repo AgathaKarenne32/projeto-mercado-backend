@@ -48,7 +48,7 @@ public class NfceController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de notas fiscais retornada com sucesso")
     })
-    @GetMapping("/")
+    @GetMapping()
     public ResponseEntity<SuccessResponse<List<NfceResponse>>> getAll(
             @RequestHeader("Authorization") String authorization,
             @RequestParam(defaultValue = "0") int page,
@@ -117,7 +117,7 @@ public class NfceController {
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))})
     })
-    @PostMapping("/")
+    @PostMapping()
     public ResponseEntity<SuccessResponse<NfceResponse>> registerManual(@RequestHeader("Authorization") String authorization,
                                                                         @RequestBody NfceRequest manualData) {
         NfceResponse data = nfceService.registerManual(authorization, manualData);
