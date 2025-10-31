@@ -59,8 +59,8 @@ public class RascunhoServiceImpl implements RascunhoService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Rascunho> rascunhos = rascunhoRepository.findByUser(usuarioLogado, pageable);
-        return rascunhos.map(this::paraRascunhoResponse);
+        Page<Rascunho> rascunhosPage = rascunhoRepository.findByUser(usuarioLogado, pageable);
+        return rascunhosPage.map(this::paraRascunhoResponse);
     }
 
     @Override

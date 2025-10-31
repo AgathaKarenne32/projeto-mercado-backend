@@ -16,6 +16,9 @@ import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
 import com.prati.projetomercado.utils.TokenUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,17 +43,13 @@ public class SupermarketService {
     }
 
     @Transactional(readOnly = true)
-    public List<SupermarketResponse> getAll(String accessToken) {
+    public Page<SupermarketResponse> getAll(String accessToken, int page, int size) {
         AuthUser user = getAuthenticatedUser(accessToken);
-        List<Supermarket> supermarkets = supermarketRepo.findAllByCreatedByUser(user);
-        List<SupermarketResponse> supermarketList = new ArrayList<>();
 
-        for (Supermarket supermarket : supermarkets) {
-            SupermarketResponse marketDto = SupermarketResponse.from(supermarket);
-            supermarketList.add(marketDto);
-        }
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Supermarket> supermarketsPage = supermarketRepo.findAllByCreatedByUser(user, pageable);
 
-        return supermarketList;
+        return supermarketsPage.map(SupermarketResponse::from);
     }
 
     @Transactional(rollbackFor = Exception.class)
