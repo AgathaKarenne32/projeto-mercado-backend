@@ -35,9 +35,9 @@ public class RascunhoController {
             @ApiResponse(responseCode = "201", description = "Rascunho criado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
     })
-    public ResponseEntity<RascunhoResponse> criarRascunho(@RequestBody CreateRascunhoRequest request) {
+    public ResponseEntity<SuccessResponse<RascunhoResponse>> criarRascunho(@RequestBody CreateRascunhoRequest request) {
         RascunhoResponse response = rascunhoService.criarRascunho(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new SuccessResponse<>("Rascunho criado com sucesso.", response));
     }
 
     @GetMapping
@@ -62,9 +62,9 @@ public class RascunhoController {
             @ApiResponse(responseCode = "404", description = "Rascunho não encontrado"),
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
     })
-    public ResponseEntity<RascunhoResponse> buscarRascunhoPorId(@PathVariable("id") Long rascunhoId) {
+    public ResponseEntity<SuccessResponse<RascunhoResponse>> buscarRascunhoPorId(@PathVariable("id") Long rascunhoId) {
         RascunhoResponse response = rascunhoService.buscarRascunhoPorId(rascunhoId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new SuccessResponse<>("Rascunho encontrado com sucesso.", response));
     }
 
     @PutMapping("/{id}")
@@ -74,9 +74,9 @@ public class RascunhoController {
             @ApiResponse(responseCode = "404", description = "Rascunho não encontrado"),
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
     })
-    public ResponseEntity<RascunhoResponse> atualizarRascunho(@PathVariable("id") Long rascunhoId, @RequestBody UpdateRascunhoRequest request) {
+    public ResponseEntity<SuccessResponse<RascunhoResponse>> atualizarRascunho(@PathVariable("id") Long rascunhoId, @RequestBody UpdateRascunhoRequest request) {
         RascunhoResponse response = rascunhoService.atualizarRascunho(rascunhoId, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new SuccessResponse<>("Rascunho editado com sucesso.", response));
     }
 
     @DeleteMapping("/{id}")
