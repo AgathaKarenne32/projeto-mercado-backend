@@ -3,6 +3,7 @@ package com.prati.projetomercado.service;
 import com.prati.projetomercado.dto.request.CreateRascunhoRequest;
 import com.prati.projetomercado.dto.request.UpdateRascunhoRequest;
 import com.prati.projetomercado.dto.response.RascunhoResponse;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ public interface RascunhoService {
      * Busca todos os rascunhos pertencentes ao usuário autenticado.
      * @return Uma lista de rascunhos, formatada como DTOs de resposta.
      */
-    List<RascunhoResponse> buscarRascunhosDoUsuario();
+    Page<RascunhoResponse> buscarRascunhosDoUsuario(int page, int size);
 
     /**
      * Busca um rascunho específico pelo seu ID.

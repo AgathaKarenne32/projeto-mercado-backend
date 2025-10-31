@@ -56,7 +56,7 @@ public class NfceService {
             throw new UnauthorizedAccessException("Você não tem permissão para acessar esta nota fiscal.");
         }
 
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     @Transactional(readOnly = true)
@@ -66,7 +66,7 @@ public class NfceService {
         Pageable pageable = PageRequest.of(page, size);
         Page<Purchase> purchasesPage = purchaseRepo.findAllByUser(user, pageable);
 
-        return purchasesPage.map(NfceResponse::toDto);
+        return purchasesPage.map(NfceResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -113,7 +113,7 @@ public class NfceService {
             purchase.getItems().add(builder.buildItem(product, purchase, catalog));
         }
 
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -142,7 +142,7 @@ public class NfceService {
             }
         }
 
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -208,7 +208,7 @@ public class NfceService {
         }
 
         purchaseRepo.save(purchase);
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     private AuthUser getAuthenticatedUser(String accessToken) {

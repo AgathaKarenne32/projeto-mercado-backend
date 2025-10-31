@@ -55,8 +55,8 @@ public class NfceController {
             @RequestParam(defaultValue = "10") int size
     ) {
         Page<NfceResponse> data = nfceService.getAll(authorization, page, size);
-
-        return ResponseEntity.ok(new SuccessResponse<>("Notas fiscais encontradas com sucesso.", data.getContent(), new PageResponse(data)));
+        PageResponse pageInfo = PageResponse.from(data);
+        return ResponseEntity.ok(new SuccessResponse<>("Notas fiscais encontradas com sucesso.", data.getContent(), pageInfo));
     }
 
     @Operation(summary = "Busca uma nota fiscal pela chave de acesso",
@@ -95,7 +95,7 @@ public class NfceController {
             @ApiResponse(responseCode = "404", description = "Supermercado não encontrado",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "409", description = "Nota fisca já existe",
+            @ApiResponse(responseCode = "409", description = "Nota fiscal já existe",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))})
     })
@@ -113,7 +113,7 @@ public class NfceController {
             @ApiResponse(responseCode = "404", description = "Supermercado não encontrado",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "409", description = "Nota fisca já existe",
+            @ApiResponse(responseCode = "409", description = "Nota fiscal já existe",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))})
     })

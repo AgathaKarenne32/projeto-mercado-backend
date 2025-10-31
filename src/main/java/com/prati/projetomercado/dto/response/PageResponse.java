@@ -9,7 +9,13 @@ public record PageResponse(
         int totalPages,
         boolean last
 ) {
-    public PageResponse(Page<NfceResponse> page) {
-        this(page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages(), page.isLast());
+    public static PageResponse from(Page<?> page) {
+        return new PageResponse(
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isLast()
+        );
     }
 }

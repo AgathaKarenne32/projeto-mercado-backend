@@ -1,7 +1,5 @@
 package com.prati.projetomercado.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
 public record SuccessResponse<T>(
         String statusMessage,
         boolean success,

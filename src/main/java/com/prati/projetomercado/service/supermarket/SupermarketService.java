@@ -36,7 +36,7 @@ public class SupermarketService {
     public SupermarketResponse getOne(String accessToken, long id) {
         Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
-        return SupermarketResponse.toDto(supermarket);
+        return SupermarketResponse.from(supermarket);
     }
 
     @Transactional(readOnly = true)
@@ -46,7 +46,7 @@ public class SupermarketService {
         List<SupermarketResponse> supermarketList = new ArrayList<>();
 
         for (Supermarket supermarket : supermarkets) {
-            SupermarketResponse marketDto = SupermarketResponse.toDto(supermarket);
+            SupermarketResponse marketDto = SupermarketResponse.from(supermarket);
             supermarketList.add(marketDto);
         }
 
@@ -59,7 +59,7 @@ public class SupermarketService {
 
         Supermarket market = supermarketRepo.save(builder.buildSupermarket(supermarketData, user, true));
 
-        return SupermarketResponse.toDto(market);
+        return SupermarketResponse.from(market);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -82,7 +82,7 @@ public class SupermarketService {
         supermarket.setCity(supermarketData.city());
         supermarket.setState(supermarketData.state());
 
-        return SupermarketResponse.toDto(supermarket);
+        return SupermarketResponse.from(supermarket);
     }
 
     @Transactional(rollbackFor = Exception.class)
