@@ -13,7 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
@@ -32,8 +32,9 @@ public class UserAutenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        return Arrays.stream(SecurityConfiguration.PUBLIC_ENDPOINTS)
-                .anyMatch(p -> new MvcRequestMatcher(introspector, p).matches(request));
+        return Arrays.stream(SecurityConfiguration.PUBLIC_ENDPOINTS).anyMatch(
+                stringURI -> PathPatternRequestMatcher.withDefaults().matcher(stringURI).matches(request)
+        );
     }
 
     @Override
