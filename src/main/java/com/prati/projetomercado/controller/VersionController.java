@@ -15,7 +15,7 @@ import java.util.Map;
 @Tag(name = "Versão", description = "Endpoint para verificar a versão da aplicação")
 public class VersionController {
 
-    private BuildProperties buildProperties;
+    private final BuildProperties buildProperties;
 
     @Operation(summary = "Retorna a versão atual da aplicação",
             description = "Verifica a versão definida no pom.xml do projeto.")
