@@ -13,14 +13,21 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Set;
 import java.util.HashSet;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.prati.projetomercado.repository.AccessTokenRepository;
+import lombok.RequiredArgsConstructor;
 
 
 @Service
+@RequiredArgsConstructor
 public class JwtTokenServiceImpl {
     //TODO colocar secret key em um arquivo a parte
     public static final String SECRET_KEY = "MUDAR_DEPOIS";
 
     public static final String ISSUER = "prati-projeto-mercado";
+
+    private final AccessTokenRepository accessTokenRepository;
 
     public String generateToken(AuthUser authUser, Instant expirationDate) {
         try {
@@ -71,10 +78,21 @@ public class JwtTokenServiceImpl {
 
     public void invalidateToken(String token) {
         blacklist.add(token);
+        accessTokenRepository.findByToken(token)
+                .ifPresent(accessTokenRepository::delete);
     }
 
     public boolean isTokenInvalid(String token) {
         return blacklist.contains(token);
+    }
+
+    public String getSubjectFromExpiredToken(String token) {
+        try {
+            DecodedJWT jwt = JWT.decode(token);
+            return jwt.getSubject();
+        } catch (JWTDecodeException exception){
+            throw new JWTVerificationException("Token inválido ou malformado.");
+        }
     }
 
 }
