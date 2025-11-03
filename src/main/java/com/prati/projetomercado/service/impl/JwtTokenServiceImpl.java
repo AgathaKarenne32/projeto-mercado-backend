@@ -4,7 +4,6 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
-import com.prati.projetomercado.config.UserDetailsImpl;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.RefreshToken;
 import org.springframework.stereotype.Service;
@@ -17,17 +16,27 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.prati.projetomercado.repository.AccessTokenRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 
 
 @Service
 @RequiredArgsConstructor
 public class JwtTokenServiceImpl {
-    //TODO colocar secret key em um arquivo a parte
-    public static final String SECRET_KEY = "MUDAR_DEPOIS";
+    @Value("${jwt.secret}")
+    private String SECRET_KEY;
 
-    public static final String ISSUER = "prati-projeto-mercado";
+    @Value("${jwt.issuer}")
+    private String ISSUER;
+
+    @Value("${jwt.expiration.access-token.hours}")
+    private int ACCESS_TOKEN_EXPIRATION_HOURS;
+
+    @Value("${jwt.expiration.refresh-token.hours}")
+    private int REFRESH_TOKEN_EXPIRATION_HOURS;
 
     private final AccessTokenRepository accessTokenRepository;
+
+    private final Set<String> blacklist = new HashSet<>();
 
     public String generateToken(AuthUser authUser, Instant expirationDate) {
         try {
@@ -64,17 +73,15 @@ public class JwtTokenServiceImpl {
     }
 
     public Instant expirationAccessTokenDate() {
-        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusHours(1).toInstant();
+        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusHours(ACCESS_TOKEN_EXPIRATION_HOURS).toInstant();
     }
 
     public RefreshToken generateNewRefreshToken(AuthUser user){
         var refreshToken = new RefreshToken();
         refreshToken.setAuthUser(user);
-        refreshToken.setExpiresAt(Instant.now().plusSeconds(3600 * 12));
+        refreshToken.setExpiresAt(Instant.now().plusSeconds(3600L * REFRESH_TOKEN_EXPIRATION_HOURS));
         return refreshToken;
     }
-
-    private final Set<String> blacklist = new HashSet<>();
 
     public void invalidateToken(String token) {
         blacklist.add(token);

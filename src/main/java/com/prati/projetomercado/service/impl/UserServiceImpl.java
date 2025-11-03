@@ -28,6 +28,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
+import java.util.Comparator;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -109,11 +110,38 @@ public class UserServiceImpl implements UserService {
             // Se o usuário não estiver ativo, lança uma exceção e impede o login.
             throw new AuthException("Por favor, confirme seu e-mail para ativar sua conta.");
         }
+        // Substituindo o bloco "accessTokenEntityOld"
 
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(user);
+        // 1. (Parte 2 da Issue) LIMPAR TOKENS EXPIRADOS
+        // Busca TODOS os tokens do usuário
+        List<AccessToken> userTokens = accessTokenRepository.findAllByAuthUser(user);
 
-        if (accessTokenEntityOld != null) {
-            accessTokenRepository.delete(accessTokenEntityOld);
+        // Filtra e prepara para deletar os expirados
+        List<AccessToken> expiredTokens = userTokens.stream()
+                .filter(token -> token.getExpiredDate().isBefore(Instant.now()))
+                .toList();
+
+        if (!expiredTokens.isEmpty()) {
+            // Deleta todos os tokens expirados de uma vez
+            accessTokenRepository.deleteAll(expiredTokens);
+        }
+
+        // 2. (Parte 1 da Issue) LIMITAR A 3 TOKENS ATIVOS
+        // Filtra os tokens que ainda estão ativos
+        List<AccessToken> activeTokens = userTokens.stream()
+                .filter(token -> token.getExpiredDate().isAfter(Instant.now()))
+                .toList();
+
+        // Se o usuário já tem 3 ou mais tokens ativos, apaga o mais antigo
+        if (activeTokens.size() >= 3) {
+            // Encontra o token mais antigo (com a menor data de expiração)
+            AccessToken oldestToken = activeTokens.stream()
+                    .min(Comparator.comparing(AccessToken::getExpiredDate))
+                    .orElse(null);
+
+            if (oldestToken != null) {
+                accessTokenRepository.delete(oldestToken);
+            }
         }
 
         var refreshToken = jwtTokenService.generateNewRefreshToken(userDetailsImpl.getAuthUser());
@@ -141,8 +169,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId) {
-
-
         var accessTokenEntity = accessTokenRepository.findByToken(accessToken)
                 .orElseThrow(() -> new AuthException("Token foi invalidado (logout realizado)"));
 
