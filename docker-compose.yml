@@ -1,0 +1,25 @@
+# Define a versão do Docker Compose que estamos usando
+version: '3.8'
+
+# Define a lista de "serviços" ou "containers" que queremos rodar
+services:
+
+  # Este é o nome do nosso serviço principal (a API do backend)
+  projetomercado-api:
+
+    # Diz ao Docker para construir a imagem usando o 'Dockerfile'
+    # que está na mesma pasta (indicado pelo '.')
+    build: .
+
+    # Dá um nome para a imagem que será construída
+    image: projetomercado
+
+    # Mapeia as portas: conecta a porta 8080 do seu PC
+    # à porta 8080 de dentro do container
+    ports:
+      - "8080:8080"
+
+    # Informa ao container para carregar as variáveis (senhas, etc.)
+    # do arquivo .env
+    env_file:
+      - .env

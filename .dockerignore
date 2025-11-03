@@ -1,0 +1,13 @@
+# Ignora a pasta de build local
+target/
+
+# Ignora pastas de IDE e Git
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# A LINHA MAIS IMPORTANTE:
+# Ignora o arquivo de segredos! As senhas serão passadas de forma segura
+# quando o container for executado, não "assadas" dentro dele.
+.env

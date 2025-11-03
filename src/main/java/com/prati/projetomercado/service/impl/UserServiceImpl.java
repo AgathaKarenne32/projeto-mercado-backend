@@ -133,7 +133,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Optional<AuthUser> getAuthUser(String accessToken) {
-        var email = jwtTokenService.getSubjectFromToken(accessToken);
+        var email = jwtTokenService.getSubjectFromExpiredToken(accessToken);
         return userRepository.findByEmail(email);
 
 
@@ -141,33 +141,43 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId) {
-        final var refreshToken = refreshTokenRepository.findByIdAndExpiresAtAfter(refreshTokenId, Instant.now()).orElseThrow(() -> new AuthException("No refreshToken found / refreshToken expired"));
+
+
+        var accessTokenEntity = accessTokenRepository.findByToken(accessToken)
+                .orElseThrow(() -> new AuthException("Token foi invalidado (logout realizado)"));
+
+        final var refreshToken = refreshTokenRepository
+                .findByIdAndExpiresAtAfter(refreshTokenId, Instant.now())
+                .orElseThrow(() -> new AuthException("No refreshToken found / refreshToken expired"));
 
         if (refreshToken.isAlreadyUsed()) {
             throw new AuthException("Token has already been used");
         }
 
+        if (!refreshToken.getAuthUser().equals(accessTokenEntity.getAuthUser())) {
+            throw new AuthException("Incompatibilidade de tokens.");
+        }
+
         refreshToken.setAlreadyUsed(true);
         refreshTokenRepository.save(refreshToken);
+        accessTokenRepository.delete(accessTokenEntity);
 
-        var authuser = getAuthUser(accessToken).orElseThrow(() -> new AuthException("user not found"));
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUserAndToken(authuser, accessToken);
-        accessTokenEntityOld.ifPresent(accessTokenEntity -> {
-            accessTokenRepository.delete(accessTokenEntity);
-        });
+        var authuser = refreshToken.getAuthUser();
 
         var newRefreshToken = jwtTokenService.generateNewRefreshToken(authuser);
-
         refreshTokenRepository.save(newRefreshToken);
-        var newAccessTokenExpDate = jwtTokenService.expirationAccessTokenDate();
-        var newAccessToken = jwtTokenService.generateToken(authuser, newAccessTokenExpDate);
 
-        var newAccessTokenEntity = AccessToken.builder().authUser(authuser).token(newAccessToken).expiredDate(newAccessTokenExpDate).build();
+        var newAccessExp = jwtTokenService.expirationAccessTokenDate();
+        var newAccessToken = jwtTokenService.generateToken(authuser, newAccessExp);
 
-        accessTokenRepository.save(newAccessTokenEntity);
+        var newAccessEntity = AccessToken.builder()
+                .authUser(authuser)
+                .token(newAccessToken)
+                .expiredDate(newAccessExp)
+                .build();
+        accessTokenRepository.save(newAccessEntity);
 
         return new JwtToken(newAccessToken, newRefreshToken.getId());
-
     }
 
     @Override
