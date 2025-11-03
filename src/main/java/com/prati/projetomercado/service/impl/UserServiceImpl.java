@@ -27,6 +27,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -49,40 +50,28 @@ public class UserServiceImpl implements UserService {
     @Value("${email.confirmation.enabled}")
     private boolean emailConfirmationEnabled;
 
-
     @Override
     public void registerUser(CreateUserRequest createUserRequest) {
         if (!createUserRequest.password().equals(createUserRequest.confirmPassword())) {
             throw new BadCredentialsException(
                     List.of(new FieldError("confirmPassword", "Passwords don't match"), new FieldError("password", "Passwords don't match")));
         }
-
-        if (createUserRequest.password().length() < 8) { // Ajustado para 8, conforme seu controller
+        if (createUserRequest.password().length() < 8) {
             throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 8 characters")));
         }
-        // A NOVA LÓGICA CONDICIONAL INTERRUPTOR
-        if (emailConfirmationEnabled) {
-            // --- CENÁRIO 1: ENVIO DE E-MAIL LIGADO --- email.confirmation.enabled=true
-            String confirmationToken = UUID.randomUUID().toString();
-            AuthUser newUser = AuthUser.builder()
-                    .email(createUserRequest.email())
-                    .username(createUserRequest.username())
-                    .password(encoder.encode(createUserRequest.password()))
-                    .enabled(false) // Começa desativado
-                    .confirmationToken(confirmationToken)
-                    .confirmationTokenExpiry(LocalDateTime.now().plusHours(24))
-                    .build();
-            AuthUser savedUser = userRepository.save(newUser);
-            emailService.sendConfirmationEmail(savedUser);
+
+        Optional<AuthUser> existingUserOpt = userRepository.findByEmail(createUserRequest.email());
+
+        if (existingUserOpt.isPresent()) {
+            AuthUser existingUser = existingUserOpt.get();
+
+            if (existingUser.isEnabled()) {
+                throw new EmailAlreadyExistsException("Este e-mail já está em uso por uma conta ativa.");
+            } else {
+                updateUnconfirmedUser(existingUser, createUserRequest);
+            }
         } else {
-            // --- CENÁRIO 2: ENVIO DE E-MAIL DESLIGADO (MODO DEV) --- email.confirmation.enabled=false
-            AuthUser newUser = AuthUser.builder()
-                    .email(createUserRequest.email())
-                    .username(createUserRequest.username())
-                    .password(encoder.encode(createUserRequest.password()))
-                    .enabled(true) // Já começa ativado
-                    .build();
-            userRepository.save(newUser);
+            createNewUser(createUserRequest);
         }
     }
 
@@ -260,5 +249,54 @@ public class UserServiceImpl implements UserService {
 
         // 5. Salva as alterações no banco de dados
         userRepository.save(user);
+    }
+
+    // ADICIONE ESTES DOIS MÉTODOS NO FINAL DA SUA CLASSE UserServiceImpl
+
+    private void createNewUser(CreateUserRequest request) {
+        // Esta é a sua lógica de criação que já existe (com o if/else do modo dev)
+        if (emailConfirmationEnabled) {
+            String confirmationToken = UUID.randomUUID().toString();
+            AuthUser newUser = AuthUser.builder()
+                    .email(request.email())
+                    .username(request.username())
+                    .password(encoder.encode(request.password()))
+                    .enabled(false)
+                    .confirmationToken(confirmationToken)
+                    .confirmationTokenExpiry(LocalDateTime.now().plusHours(24))
+                    .build();
+            AuthUser savedUser = userRepository.save(newUser);
+            emailService.sendConfirmationEmail(savedUser);
+        } else {
+            // Modo dev: já cria o usuário ativo
+            AuthUser newUser = AuthUser.builder()
+                    .email(request.email())
+                    .username(request.username())
+                    .password(encoder.encode(request.password()))
+                    .enabled(true)
+                    .build();
+            userRepository.save(newUser);
+        }
+    }
+
+    private void updateUnconfirmedUser(AuthUser userToUpdate, CreateUserRequest request) {
+        userToUpdate.setUsername(request.username());
+        userToUpdate.setPassword(encoder.encode(request.password()));
+
+        if (emailConfirmationEnabled) {
+            String newConfirmationToken = UUID.randomUUID().toString();
+            userToUpdate.setConfirmationToken(newConfirmationToken);
+            userToUpdate.setConfirmationTokenExpiry(LocalDateTime.now().plusHours(24));
+        } else {
+            userToUpdate.setEnabled(true);
+            userToUpdate.setConfirmationToken(null);
+            userToUpdate.setConfirmationTokenExpiry(null);
+        }
+
+        AuthUser updatedUser = userRepository.save(userToUpdate);
+
+        if (emailConfirmationEnabled) {
+            emailService.sendConfirmationEmail(updatedUser);
+        }
     }
 }
