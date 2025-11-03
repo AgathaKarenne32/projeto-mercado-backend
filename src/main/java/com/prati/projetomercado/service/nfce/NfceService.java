@@ -22,7 +22,7 @@ import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
 import com.prati.projetomercado.utils.TokenUtils;
 import com.prati.projetomercado.utils.scraper.IScraper;
-import com.prati.projetomercado.utils.scraper.StateGroup;
+import com.prati.projetomercado.utils.scraper.StatesRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +39,7 @@ import java.util.UUID;
 public class NfceService {
 
     private final EntityBuilderUtils builder;
+    private final StatesRegistry statesRegistry;
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
     private final PurchaseRepository purchaseRepo;
@@ -75,13 +76,13 @@ public class NfceService {
     @Transactional(readOnly = true)
     public StatesResponse getStates(String accessToken) {
         getAuthenticatedUser(accessToken);
-        return new StatesResponse(StateGroup.getAllImplementedStates());
+        return new StatesResponse(statesRegistry.getAllImplementedStates());
     }
 
     @Transactional(rollbackFor = Exception.class)
     public NfceResponse registerLink(String accessToken, String url) {
         String state = getStateFromUrl(url);
-        IScraper scraper = StateGroup.getScraperByState(state);
+        IScraper scraper = statesRegistry.getScraperByState(state);
         NfceRequest nfceData = scraper.getData(url);
         return savePurchase(nfceData, accessToken, false);
     }
