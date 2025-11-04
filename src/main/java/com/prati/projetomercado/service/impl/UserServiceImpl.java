@@ -54,11 +54,8 @@ public class UserServiceImpl implements UserService {
     private final EmailService emailService;
     private final PasswordResetTokenRepository tokenRepository;
 
-    @Value("${email.confirmation.enabled}")
-    private boolean emailConfirmationEnabled;
-
-    @Value("${email.reset.enabled}")
-    private boolean emailResetEnabled;
+    @Value("${email.service.enabled}")
+    private boolean emailServiceEnabled;
 
     @Value("${password.reset.token.expiry.minutes}")
     private long RESET_TOKEN_EXPIRATION_MINUTES;
@@ -307,7 +304,7 @@ public class UserServiceImpl implements UserService {
                 .build();
         tokenRepository.save(token);
 
-        if(emailResetEnabled) {
+        if(emailServiceEnabled) {
             emailService.sendResetCodeEmail(user, code);
         }
     }
@@ -358,7 +355,7 @@ public class UserServiceImpl implements UserService {
 
     private void createNewUser(CreateUserRequest request) {
         // Esta é a sua lógica de criação que já existe (com o if/else do modo dev)
-        if (emailConfirmationEnabled) {
+        if (emailServiceEnabled) {
             String confirmationToken = UUID.randomUUID().toString();
             AuthUser newUser = AuthUser.builder()
                     .email(request.email())
@@ -386,7 +383,7 @@ public class UserServiceImpl implements UserService {
         userToUpdate.setUsername(request.username());
         userToUpdate.setPassword(encoder.encode(request.password()));
 
-        if (emailConfirmationEnabled) {
+        if (emailServiceEnabled) {
             String newConfirmationToken = UUID.randomUUID().toString();
             userToUpdate.setConfirmationToken(newConfirmationToken);
             userToUpdate.setConfirmationTokenExpiry(LocalDateTime.now().plusHours(24));
@@ -398,7 +395,7 @@ public class UserServiceImpl implements UserService {
 
         AuthUser updatedUser = userRepository.save(userToUpdate);
 
-        if (emailConfirmationEnabled) {
+        if (emailServiceEnabled) {
             emailService.sendConfirmationEmail(updatedUser);
         }
     }
