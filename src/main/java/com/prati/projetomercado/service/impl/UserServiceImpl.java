@@ -27,6 +27,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
+import java.util.Comparator;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -49,40 +51,28 @@ public class UserServiceImpl implements UserService {
     @Value("${email.confirmation.enabled}")
     private boolean emailConfirmationEnabled;
 
-
     @Override
     public void registerUser(CreateUserRequest createUserRequest) {
         if (!createUserRequest.password().equals(createUserRequest.confirmPassword())) {
             throw new BadCredentialsException(
                     List.of(new FieldError("confirmPassword", "Passwords don't match"), new FieldError("password", "Passwords don't match")));
         }
-
-        if (createUserRequest.password().length() < 8) { // Ajustado para 8, conforme seu controller
+        if (createUserRequest.password().length() < 8) {
             throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 8 characters")));
         }
-        // A NOVA LÓGICA CONDICIONAL INTERRUPTOR
-        if (emailConfirmationEnabled) {
-            // --- CENÁRIO 1: ENVIO DE E-MAIL LIGADO --- email.confirmation.enabled=true
-            String confirmationToken = UUID.randomUUID().toString();
-            AuthUser newUser = AuthUser.builder()
-                    .email(createUserRequest.email())
-                    .username(createUserRequest.username())
-                    .password(encoder.encode(createUserRequest.password()))
-                    .enabled(false) // Começa desativado
-                    .confirmationToken(confirmationToken)
-                    .confirmationTokenExpiry(LocalDateTime.now().plusHours(24))
-                    .build();
-            AuthUser savedUser = userRepository.save(newUser);
-            emailService.sendConfirmationEmail(savedUser);
+
+        Optional<AuthUser> existingUserOpt = userRepository.findByEmail(createUserRequest.email());
+
+        if (existingUserOpt.isPresent()) {
+            AuthUser existingUser = existingUserOpt.get();
+
+            if (existingUser.isEnabled()) {
+                throw new EmailAlreadyExistsException("Este e-mail já está em uso por uma conta ativa.");
+            } else {
+                updateUnconfirmedUser(existingUser, createUserRequest);
+            }
         } else {
-            // --- CENÁRIO 2: ENVIO DE E-MAIL DESLIGADO (MODO DEV) --- email.confirmation.enabled=false
-            AuthUser newUser = AuthUser.builder()
-                    .email(createUserRequest.email())
-                    .username(createUserRequest.username())
-                    .password(encoder.encode(createUserRequest.password()))
-                    .enabled(true) // Já começa ativado
-                    .build();
-            userRepository.save(newUser);
+            createNewUser(createUserRequest);
         }
     }
 
@@ -120,11 +110,38 @@ public class UserServiceImpl implements UserService {
             // Se o usuário não estiver ativo, lança uma exceção e impede o login.
             throw new AuthException("Por favor, confirme seu e-mail para ativar sua conta.");
         }
+        // Substituindo o bloco "accessTokenEntityOld"
 
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(user);
+        // 1. (Parte 2 da Issue) LIMPAR TOKENS EXPIRADOS
+        // Busca TODOS os tokens do usuário
+        List<AccessToken> userTokens = accessTokenRepository.findAllByAuthUser(user);
 
-        if (accessTokenEntityOld != null) {
-            accessTokenRepository.delete(accessTokenEntityOld);
+        // Filtra e prepara para deletar os expirados
+        List<AccessToken> expiredTokens = userTokens.stream()
+                .filter(token -> token.getExpiredDate().isBefore(Instant.now()))
+                .toList();
+
+        if (!expiredTokens.isEmpty()) {
+            // Deleta todos os tokens expirados de uma vez
+            accessTokenRepository.deleteAll(expiredTokens);
+        }
+
+        // 2. (Parte 1 da Issue) LIMITAR A 3 TOKENS ATIVOS
+        // Filtra os tokens que ainda estão ativos
+        List<AccessToken> activeTokens = userTokens.stream()
+                .filter(token -> token.getExpiredDate().isAfter(Instant.now()))
+                .toList();
+
+        // Se o usuário já tem 3 ou mais tokens ativos, apaga o mais antigo
+        if (activeTokens.size() >= 3) {
+            // Encontra o token mais antigo (com a menor data de expiração)
+            AccessToken oldestToken = activeTokens.stream()
+                    .min(Comparator.comparing(AccessToken::getExpiredDate))
+                    .orElse(null);
+
+            if (oldestToken != null) {
+                accessTokenRepository.delete(oldestToken);
+            }
         }
 
         var refreshToken = jwtTokenService.generateNewRefreshToken(userDetailsImpl.getAuthUser());
@@ -144,7 +161,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Optional<AuthUser> getAuthUser(String accessToken) {
-        var email = jwtTokenService.getSubjectFromToken(accessToken);
+        var email = jwtTokenService.getSubjectFromExpiredToken(accessToken);
         return userRepository.findByEmail(email);
 
 
@@ -152,33 +169,41 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId) {
-        final var refreshToken = refreshTokenRepository.findByIdAndExpiresAtAfter(refreshTokenId, Instant.now()).orElseThrow(() -> new AuthException("No refreshToken found / refreshToken expired"));
+        var accessTokenEntity = accessTokenRepository.findByToken(accessToken)
+                .orElseThrow(() -> new AuthException("Token foi invalidado (logout realizado)"));
+
+        final var refreshToken = refreshTokenRepository
+                .findByIdAndExpiresAtAfter(refreshTokenId, Instant.now())
+                .orElseThrow(() -> new AuthException("No refreshToken found / refreshToken expired"));
 
         if (refreshToken.isAlreadyUsed()) {
             throw new AuthException("Token has already been used");
         }
 
+        if (!refreshToken.getAuthUser().equals(accessTokenEntity.getAuthUser())) {
+            throw new AuthException("Incompatibilidade de tokens.");
+        }
+
         refreshToken.setAlreadyUsed(true);
         refreshTokenRepository.save(refreshToken);
+        accessTokenRepository.delete(accessTokenEntity);
 
-        var authuser = getAuthUser(accessToken).orElseThrow(() -> new AuthException("user not found"));
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUserAndToken(authuser, accessToken);
-        accessTokenEntityOld.ifPresent(accessTokenEntity -> {
-            accessTokenRepository.delete(accessTokenEntity);
-        });
+        var authuser = refreshToken.getAuthUser();
 
         var newRefreshToken = jwtTokenService.generateNewRefreshToken(authuser);
-
         refreshTokenRepository.save(newRefreshToken);
-        var newAccessTokenExpDate = jwtTokenService.expirationAccessTokenDate();
-        var newAccessToken = jwtTokenService.generateToken(authuser, newAccessTokenExpDate);
 
-        var newAccessTokenEntity = AccessToken.builder().authUser(authuser).token(newAccessToken).expiredDate(newAccessTokenExpDate).build();
+        var newAccessExp = jwtTokenService.expirationAccessTokenDate();
+        var newAccessToken = jwtTokenService.generateToken(authuser, newAccessExp);
 
-        accessTokenRepository.save(newAccessTokenEntity);
+        var newAccessEntity = AccessToken.builder()
+                .authUser(authuser)
+                .token(newAccessToken)
+                .expiredDate(newAccessExp)
+                .build();
+        accessTokenRepository.save(newAccessEntity);
 
         return new JwtToken(newAccessToken, newRefreshToken.getId());
-
     }
 
     @Override
@@ -250,5 +275,54 @@ public class UserServiceImpl implements UserService {
 
         // 5. Salva as alterações no banco de dados
         userRepository.save(user);
+    }
+
+    // ADICIONE ESTES DOIS MÉTODOS NO FINAL DA SUA CLASSE UserServiceImpl
+
+    private void createNewUser(CreateUserRequest request) {
+        // Esta é a sua lógica de criação que já existe (com o if/else do modo dev)
+        if (emailConfirmationEnabled) {
+            String confirmationToken = UUID.randomUUID().toString();
+            AuthUser newUser = AuthUser.builder()
+                    .email(request.email())
+                    .username(request.username())
+                    .password(encoder.encode(request.password()))
+                    .enabled(false)
+                    .confirmationToken(confirmationToken)
+                    .confirmationTokenExpiry(LocalDateTime.now().plusHours(24))
+                    .build();
+            AuthUser savedUser = userRepository.save(newUser);
+            emailService.sendConfirmationEmail(savedUser);
+        } else {
+            // Modo dev: já cria o usuário ativo
+            AuthUser newUser = AuthUser.builder()
+                    .email(request.email())
+                    .username(request.username())
+                    .password(encoder.encode(request.password()))
+                    .enabled(true)
+                    .build();
+            userRepository.save(newUser);
+        }
+    }
+
+    private void updateUnconfirmedUser(AuthUser userToUpdate, CreateUserRequest request) {
+        userToUpdate.setUsername(request.username());
+        userToUpdate.setPassword(encoder.encode(request.password()));
+
+        if (emailConfirmationEnabled) {
+            String newConfirmationToken = UUID.randomUUID().toString();
+            userToUpdate.setConfirmationToken(newConfirmationToken);
+            userToUpdate.setConfirmationTokenExpiry(LocalDateTime.now().plusHours(24));
+        } else {
+            userToUpdate.setEnabled(true);
+            userToUpdate.setConfirmationToken(null);
+            userToUpdate.setConfirmationTokenExpiry(null);
+        }
+
+        AuthUser updatedUser = userRepository.save(userToUpdate);
+
+        if (emailConfirmationEnabled) {
+            emailService.sendConfirmationEmail(updatedUser);
+        }
     }
 }

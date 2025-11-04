@@ -4,13 +4,12 @@ import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
 import com.prati.projetomercado.dto.response.NfceResponse;
 import com.prati.projetomercado.dto.response.StatesResponse;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface NfceService {
     NfceResponse findByAccessKey(String accessKey);
 
-    List<NfceResponse> findAllByUser();
+    Page<NfceResponse> findAllByUser(int page, int size);
 
     StatesResponse getAvailableStates();
 

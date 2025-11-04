@@ -21,17 +21,19 @@ import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
 import com.prati.projetomercado.service.NfceService;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
+import com.prati.projetomercado.utils.TokenUtils;
+import com.prati.projetomercado.utils.scraper.StatesRegistry;
 import com.prati.projetomercado.utils.scraper.Scraper;
-import com.prati.projetomercado.utils.scraper.StateGroup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,6 +42,7 @@ import java.util.UUID;
 public class NfceServiceImpl implements NfceService {
 
     private final EntityBuilderUtils builder;
+    private final StatesRegistry statesRegistry;
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
     private final PurchaseRepository purchaseRepo;
@@ -56,35 +59,32 @@ public class NfceServiceImpl implements NfceService {
             throw new UnauthorizedAccessException("Você não tem permissão para acessar esta nota fiscal.");
         }
 
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<NfceResponse> findAllByUser() {
+    public Page<NfceResponse> findAllByUser(int page, int size) {
         AuthUser user = getAuthenticatedUser();
-        List<Purchase> purchases = purchaseRepo.findAllByUser(user);
-        List<NfceResponse> nfceList = new ArrayList<>();
 
-        for (Purchase purchase : purchases) {
-            NfceResponse nfceDto = NfceResponse.toDto(purchase);
-            nfceList.add(nfceDto);
-        }
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Purchase> purchasesPage = purchaseRepo.findAllByUser(user, pageable);
 
-        return nfceList;
+        return purchasesPage.map(NfceResponse::from);
     }
 
     @Override
     @Transactional(readOnly = true)
     public StatesResponse getAvailableStates() {
-        return new StatesResponse(StateGroup.getAllImplementedStates());
+        getAuthenticatedUser();
+        return new StatesResponse(statesRegistry.getAllImplementedStates());
     }
 
     @Override
     @Transactional()
     public NfceResponse createFromLink(String url) {
         String state = getStateFromUrl(url);
-        Scraper scraper = StateGroup.getScraperByState(state);
+        Scraper scraper = statesRegistry.getScraperByState(state);
         NfceRequest nfceData = scraper.getData(url);
         return savePurchase(nfceData, false);
     }
@@ -121,7 +121,7 @@ public class NfceServiceImpl implements NfceService {
             purchase.getItems().add(builder.buildItem(product, purchase, catalog));
         }
 
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     @Override
@@ -151,7 +151,7 @@ public class NfceServiceImpl implements NfceService {
             }
         }
 
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     @Override
@@ -218,7 +218,7 @@ public class NfceServiceImpl implements NfceService {
         }
 
         purchaseRepo.save(purchase);
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     private AuthUser getAuthenticatedUser() {

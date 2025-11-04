@@ -16,9 +16,9 @@ public record NfceResponse(
         Boolean isManual,
         List<NfceRequest.Item> products
 ) {
-    public static NfceResponse toDto(Purchase purchase) {
+    public static NfceResponse from(Purchase purchase) {
         Supermarket market = purchase.getSupermarket();
-        SupermarketResponse supermarket = SupermarketResponse.toDto(market);
+        SupermarketResponse supermarket = SupermarketResponse.from(market);
 
         List<NfceRequest.Item> items = purchase.getItems().stream()
                 .map(item -> new NfceRequest.Item(

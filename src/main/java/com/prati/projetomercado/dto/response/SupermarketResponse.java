@@ -10,7 +10,7 @@ public record SupermarketResponse(
         String state,
         Boolean isManual
 ) {
-    public static SupermarketResponse toDto(Supermarket market) {
+    public static SupermarketResponse from(Supermarket market) {
         return new SupermarketResponse(
                 market.getId(),
                 market.getName(),

@@ -15,12 +15,12 @@ import com.prati.projetomercado.repository.SupermarketRepository;
 import com.prati.projetomercado.service.SupermarketService;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -48,22 +48,18 @@ public class SupermarketServiceImpl implements SupermarketService {
             throw new UnauthorizedAccessException("Você não tem permissão para acessar este supermercado");
         }
 
-        return SupermarketResponse.toDto(supermarket);
+        return SupermarketResponse.from(supermarket);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<SupermarketResponse> findAllByUser() {
+    public Page<SupermarketResponse> findAllByUser(int page, int size) {
         AuthUser user = getAuthenticatedUser();
-        List<Supermarket> supermarkets = supermarketRepo.findAllByCreatedByUser(user);
-        List<SupermarketResponse> supermarketList = new ArrayList<>();
 
-        for (Supermarket supermarket : supermarkets) {
-            SupermarketResponse marketDto = SupermarketResponse.toDto(supermarket);
-            supermarketList.add(marketDto);
-        }
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Supermarket> supermarketsPage = supermarketRepo.findAllByCreatedByUser(user, pageable);
 
-        return supermarketList;
+        return supermarketsPage.map(SupermarketResponse::from);
     }
 
     @Override
@@ -73,7 +69,7 @@ public class SupermarketServiceImpl implements SupermarketService {
 
         Supermarket market = supermarketRepo.save(builder.buildSupermarket(supermarketData, user, true));
 
-        return SupermarketResponse.toDto(market);
+        return SupermarketResponse.from(market);
     }
 
     @Override
@@ -97,7 +93,7 @@ public class SupermarketServiceImpl implements SupermarketService {
         supermarket.setCity(supermarketData.city());
         supermarket.setState(supermarketData.state());
 
-        return SupermarketResponse.toDto(supermarket);
+        return SupermarketResponse.from(supermarket);
     }
 
     @Override

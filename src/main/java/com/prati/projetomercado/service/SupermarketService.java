@@ -2,13 +2,12 @@ package com.prati.projetomercado.service;
 
 import com.prati.projetomercado.dto.request.SupermarketRequest;
 import com.prati.projetomercado.dto.response.SupermarketResponse;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface SupermarketService {
     SupermarketResponse findById(Long id);
 
-    List<SupermarketResponse> findAllByUser();
+    Page<SupermarketResponse> findAllByUser(int page, int size);
 
     SupermarketResponse create(SupermarketRequest supermarketData);
 

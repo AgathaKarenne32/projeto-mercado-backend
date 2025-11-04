@@ -1,9 +1,12 @@
 package com.prati.projetomercado.repository;
 
+import com.prati.projetomercado.entity.Catalog;
 import com.prati.projetomercado.entity.Item;
-import com.prati.projetomercado.entity.Purchase;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
 
 public interface ItemRepository extends JpaRepository<Item, Long> {
 
+    Optional<Item> findByCatalog(Catalog catalog);
 }
