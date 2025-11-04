@@ -24,13 +24,14 @@ import com.prati.projetomercado.utils.TokenUtils;
 import com.prati.projetomercado.utils.scraper.IScraper;
 import com.prati.projetomercado.utils.scraper.StatesRegistry;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,21 +57,17 @@ public class NfceService {
             throw new UnauthorizedAccessException("Você não tem permissão para acessar esta nota fiscal.");
         }
 
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     @Transactional(readOnly = true)
-    public List<NfceResponse> getAll(String accessToken) {
+    public Page<NfceResponse> getAll(String accessToken, int page, int size) {
         AuthUser user = getAuthenticatedUser(accessToken);
-        List<Purchase> purchases = purchaseRepo.findAllByUser(user);
-        List<NfceResponse> nfceList = new ArrayList<>();
 
-        for (Purchase purchase : purchases) {
-            NfceResponse nfceDto = NfceResponse.toDto(purchase);
-            nfceList.add(nfceDto);
-        }
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Purchase> purchasesPage = purchaseRepo.findAllByUser(user, pageable);
 
-        return nfceList;
+        return purchasesPage.map(NfceResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -117,7 +114,7 @@ public class NfceService {
             purchase.getItems().add(builder.buildItem(product, purchase, catalog));
         }
 
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -146,7 +143,7 @@ public class NfceService {
             }
         }
 
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -212,7 +209,7 @@ public class NfceService {
         }
 
         purchaseRepo.save(purchase);
-        return NfceResponse.toDto(purchase);
+        return NfceResponse.from(purchase);
     }
 
     private AuthUser getAuthenticatedUser(String accessToken) {

@@ -4,6 +4,7 @@ import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
 import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.dto.response.NfceResponse;
+import com.prati.projetomercado.dto.response.PageResponse;
 import com.prati.projetomercado.dto.response.StatesResponse;
 import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.service.nfce.NfceService;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -45,15 +48,15 @@ public class NfceController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de notas fiscais retornada com sucesso")
     })
-    @GetMapping("/")
-    public ResponseEntity<SuccessResponse<List<NfceResponse>>> getAll(@RequestHeader("Authorization") String authorization) {
-        List<NfceResponse> data = nfceService.getAll(authorization);
-
-        if (data.isEmpty()) {
-            return ResponseEntity.ok(new SuccessResponse<>("Nenhuma nota fiscal encontrada."));
-        }
-
-        return ResponseEntity.ok(new SuccessResponse<>("Notas fiscais encontradas com sucesso.", data));
+    @GetMapping()
+    public ResponseEntity<SuccessResponse<List<NfceResponse>>> getAll(
+            @RequestHeader("Authorization") String authorization,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<NfceResponse> data = nfceService.getAll(authorization, page, size);
+        PageResponse pageInfo = PageResponse.from(data);
+        return ResponseEntity.ok(new SuccessResponse<>("Notas fiscais encontradas com sucesso.", data.getContent(), pageInfo));
     }
 
     @Operation(summary = "Busca uma nota fiscal pela chave de acesso",
@@ -92,7 +95,7 @@ public class NfceController {
             @ApiResponse(responseCode = "404", description = "Supermercado não encontrado",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "409", description = "Nota fisca já existe",
+            @ApiResponse(responseCode = "409", description = "Nota fiscal já existe",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))})
     })
@@ -110,11 +113,11 @@ public class NfceController {
             @ApiResponse(responseCode = "404", description = "Supermercado não encontrado",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "409", description = "Nota fisca já existe",
+            @ApiResponse(responseCode = "409", description = "Nota fiscal já existe",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))})
     })
-    @PostMapping("/")
+    @PostMapping()
     public ResponseEntity<SuccessResponse<NfceResponse>> registerManual(@RequestHeader("Authorization") String authorization,
                                                                         @RequestBody NfceRequest manualData) {
         NfceResponse data = nfceService.registerManual(authorization, manualData);

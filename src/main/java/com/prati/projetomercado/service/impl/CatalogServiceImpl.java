@@ -5,6 +5,8 @@ import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
 import com.prati.projetomercado.exceptions.FieldError;
 import com.prati.projetomercado.repository.CatalogRepository;
+import com.prati.projetomercado.repository.ItemRepository;
+import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +19,7 @@ import java.util.List;
 public class CatalogServiceImpl implements CatalogService {
 
     private final CatalogRepository catalogRepository;
+    private final ItemRepository itemRepository;
 
     @Override
     public List<CatalogResponse> getCatalogByMarket(Long marketID) {
@@ -40,6 +43,11 @@ public class CatalogServiceImpl implements CatalogService {
             throw new BadCredentialsException(List.of(
                     new FieldError("catalogId", "Não é possível editar catalogo inserido via link")
             ));
+
+        if (itemRepository.findByCatalog(catalog).isPresent()) {
+            throw new RuntimeException("Não é possível deletar este item do catálogo porque existem notas fiscais associadas a ele.");
+        }
+
         catalogRepository.delete(catalog);
     }
 

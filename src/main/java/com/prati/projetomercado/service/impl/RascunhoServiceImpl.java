@@ -9,6 +9,9 @@ import com.prati.projetomercado.repository.AuthUserRepository; // Import que fal
 import com.prati.projetomercado.repository.RascunhoRepository;
 import com.prati.projetomercado.service.RascunhoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -51,12 +54,13 @@ public class RascunhoServiceImpl implements RascunhoService {
     }
 
     @Override
-    public List<RascunhoResponse> buscarRascunhosDoUsuario() {
+    public Page<RascunhoResponse> buscarRascunhosDoUsuario(int page, int size) {
         AuthUser usuarioLogado = getUsuarioAutenticado();
-        List<Rascunho> rascunhos = rascunhoRepository.findByUser(usuarioLogado);
-        return rascunhos.stream()
-                .map(this::paraRascunhoResponse)
-                .collect(Collectors.toList());
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Rascunho> rascunhosPage = rascunhoRepository.findByUser(usuarioLogado, pageable);
+        return rascunhosPage.map(this::paraRascunhoResponse);
     }
 
     @Override

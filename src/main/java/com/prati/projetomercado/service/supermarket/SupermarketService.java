@@ -16,6 +16,9 @@ import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
 import com.prati.projetomercado.utils.TokenUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,21 +39,17 @@ public class SupermarketService {
     public SupermarketResponse getOne(String accessToken, long id) {
         Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
-        return SupermarketResponse.toDto(supermarket);
+        return SupermarketResponse.from(supermarket);
     }
 
     @Transactional(readOnly = true)
-    public List<SupermarketResponse> getAll(String accessToken) {
+    public Page<SupermarketResponse> getAll(String accessToken, int page, int size) {
         AuthUser user = getAuthenticatedUser(accessToken);
-        List<Supermarket> supermarkets = supermarketRepo.findAllByCreatedByUser(user);
-        List<SupermarketResponse> supermarketList = new ArrayList<>();
 
-        for (Supermarket supermarket : supermarkets) {
-            SupermarketResponse marketDto = SupermarketResponse.toDto(supermarket);
-            supermarketList.add(marketDto);
-        }
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Supermarket> supermarketsPage = supermarketRepo.findAllByCreatedByUser(user, pageable);
 
-        return supermarketList;
+        return supermarketsPage.map(SupermarketResponse::from);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -59,7 +58,7 @@ public class SupermarketService {
 
         Supermarket market = supermarketRepo.save(builder.buildSupermarket(supermarketData, user, true));
 
-        return SupermarketResponse.toDto(market);
+        return SupermarketResponse.from(market);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -82,7 +81,7 @@ public class SupermarketService {
         supermarket.setCity(supermarketData.city());
         supermarket.setState(supermarketData.state());
 
-        return SupermarketResponse.toDto(supermarket);
+        return SupermarketResponse.from(supermarket);
     }
 
     @Transactional(rollbackFor = Exception.class)
