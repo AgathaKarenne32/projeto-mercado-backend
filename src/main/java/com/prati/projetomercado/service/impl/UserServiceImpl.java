@@ -8,12 +8,15 @@ import com.prati.projetomercado.dto.response.AuthResponse;
 import com.prati.projetomercado.dto.response.UserResponse;
 import com.prati.projetomercado.entity.AccessToken;
 import com.prati.projetomercado.entity.AuthUser;
+import com.prati.projetomercado.entity.PasswordResetToken;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
+import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
 import com.prati.projetomercado.exceptions.FieldError;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.repository.AccessTokenRepository;
 import com.prati.projetomercado.repository.AuthUserRepository;
+import com.prati.projetomercado.repository.PasswordResetTokenRepository;
 import com.prati.projetomercado.repository.RefreshTokenRepository;
 import com.prati.projetomercado.service.EmailService;
 import com.prati.projetomercado.service.UserService;
@@ -27,11 +30,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
-import java.util.Comparator;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,9 +49,16 @@ public class UserServiceImpl implements UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final AccessTokenRepository accessTokenRepository;
     private final EmailService emailService;
+    private final PasswordResetTokenRepository tokenRepository;
 
     @Value("${email.confirmation.enabled}")
     private boolean emailConfirmationEnabled;
+
+    @Value("${email.reset.enabled}")
+    private boolean emailResetEnabled;
+
+    @Value("${password.reset.token.expiry.minutes}")
+    private long RESET_TOKEN_EXPIRATION_MINUTES;
 
     @Override
     public void registerUser(CreateUserRequest createUserRequest) {
@@ -275,6 +284,71 @@ public class UserServiceImpl implements UserService {
 
         // 5. Salva as alterações no banco de dados
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void sendPasswordResetCode(String email) {
+        AuthUser user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado."));
+
+        tokenRepository.deleteUsedOrExpiredTokens(user);
+        String code = generateResetCode();
+
+        PasswordResetToken token = PasswordResetToken.builder()
+                .user(user)
+                .code(code)
+                .expiryDate(LocalDateTime.now().plusMinutes(RESET_TOKEN_EXPIRATION_MINUTES))
+                .used(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+        tokenRepository.save(token);
+
+        if(emailResetEnabled) {
+            emailService.sendResetCodeEmail(user, code);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void verifyResetCode(String email, String code) {
+        PasswordResetToken token = tokenRepository.findByUserEmailAndCode(email, code)
+                .orElseThrow(() -> new IllegalArgumentException("Código de recuperação inválido."));
+
+        if (token.isUsed()) {
+            throw new IllegalStateException("Este código já foi utilizado.");
+        }
+
+        if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("O código de recuperação expirou.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String email, String code, String newPassword) {
+        PasswordResetToken token = tokenRepository.findByUserEmailAndCode(email, code)
+                .orElseThrow(() -> new IllegalArgumentException("Código de recuperação inválido."));
+
+        if (token.isUsed()) {
+            throw new IllegalStateException("Este código já foi utilizado.");
+        }
+
+        if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("O código de recuperação expirou.");
+        }
+
+        AuthUser user = token.getUser();
+        user.setPassword(encoder.encode(newPassword));
+        userRepository.save(user);
+
+        token.setUsed(true);
+        tokenRepository.save(token);
+    }
+
+    private String generateResetCode() {
+        int code = (int) (Math.random() * 900000) + 100000;
+        return String.valueOf(code);
     }
 
     // ADICIONE ESTES DOIS MÉTODOS NO FINAL DA SUA CLASSE UserServiceImpl

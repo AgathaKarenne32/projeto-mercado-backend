@@ -34,4 +34,23 @@ public class EmailServiceImpl implements EmailService {
         // Envia o e-mail
         mailSender.send(message);
     }
+
+    @Override
+    public void sendResetCodeEmail(AuthUser user, String code) {
+        String text = String.format(
+                "Olá,\n\nRecebemos uma solicitação para redefinir sua senha.\n" +
+                        "Aqui está o seu código de recuperação:\n\n%s\n\n" +
+                        "Este código expira em 15 minutos.\n\n" +
+                        "Se você não solicitou esta alteração, pode ignorar este e-mail.",
+                code
+        );
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(user.getEmail());
+        message.setSubject("Redefinição de Senha - Projeto Mercado");
+        message.setText(text);
+
+        mailSender.send(message);
+    }
 }

@@ -13,9 +13,9 @@ import java.util.UUID;
 
 @Service
 public interface UserService {
-    
+
     public void registerUser(CreateUserRequest loginUserRequest);
-    
+
     public AuthResponse login(LoginUserRequest loginUserRequest) throws Exception;
 
     public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId);
@@ -24,15 +24,23 @@ public interface UserService {
 
     /**
      * Busca as informações do usuário atualmente autenticado.
+     *
      * @return Um DTO com os dados públicos do usuário.
      */
     UserResponse getUserInfo();
 
     /**
      * Altera a senha do usuário autenticado.
+     *
      * @param request DTO contendo a senha atual, a nova senha e a confirmação.
      */
     void changePassword(ChangePasswordRequest request);
 
     void confirmUser(String token);
+
+    void sendPasswordResetCode(String email);
+
+    void verifyResetCode(String email, String code);
+
+    void resetPassword(String email, String code, String newPassword);
 }

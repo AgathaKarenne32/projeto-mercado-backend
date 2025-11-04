@@ -3,6 +3,7 @@ package com.prati.projetomercado.controller;
 
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
+import com.prati.projetomercado.dto.request.PasswordRecoveryRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
 import com.prati.projetomercado.dto.response.AuthResponse;
 import com.prati.projetomercado.exceptions.AuthException;
@@ -20,7 +21,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
@@ -55,7 +62,7 @@ public class AuthController {
     })
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginUserRequest userRequest) throws Exception {
-        var authResponse= userService.login(userRequest);
+        var authResponse = userService.login(userRequest);
         return new ResponseEntity<>(authResponse, HttpStatus.OK);
     }
 
@@ -123,5 +130,23 @@ public class AuthController {
                     + "</body></html>";
             return ResponseEntity.badRequest().contentType(MediaType.TEXT_HTML).body(errorHtmlBody);
         }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody PasswordRecoveryRequest request) {
+        userService.sendPasswordResetCode(request.email());
+        return ResponseEntity.ok("Código de recuperação de senha enviado com sucesso.");
+    }
+
+    @PostMapping("/verify-reset-code")
+    public ResponseEntity<String> verifyResetCode(@RequestBody PasswordRecoveryRequest request) {
+        userService.verifyResetCode(request.email(), request.code());
+        return ResponseEntity.ok("Código de recuperação de senha validado.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody PasswordRecoveryRequest request) {
+        userService.resetPassword(request.email(), request.code(), request.newPassword());
+        return ResponseEntity.ok("Senha atualizada com sucesso.");
     }
 }
