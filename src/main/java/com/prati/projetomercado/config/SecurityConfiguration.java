@@ -1,6 +1,6 @@
 package com.prati.projetomercado.config;
 
-import com.prati.projetomercado.filter.UserAutenticationFilter;
+import com.prati.projetomercado.filter.UserAuthenticationFilter;
 import com.prati.projetomercado.security.oauth2.CustomOAuth2UserService;
 import com.prati.projetomercado.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.prati.projetomercado.security.oauth2.handlers.OAuth2AuthSuccessHandler;
@@ -24,7 +24,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
 
 import java.util.List;
 
@@ -50,7 +49,7 @@ public class SecurityConfiguration {
     };
 
     @Autowired
-    private UserAutenticationFilter userAutenticationFilter;
+    private UserAuthenticationFilter userAuthenticationFilter;
 
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
@@ -75,7 +74,7 @@ public class SecurityConfiguration {
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .anyRequest().permitAll()
                 )
-                .addFilterBefore(userAutenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(userAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .oauth2Login(configurer -> configurer
                         .authorizationEndpoint(endpoint -> endpoint
                                 .baseUri("/oauth2/authorize")

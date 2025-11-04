@@ -1,4 +1,4 @@
-package com.prati.projetomercado.service.nfce;
+package com.prati.projetomercado.service.impl;
 
 import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
@@ -10,20 +10,22 @@ import com.prati.projetomercado.entity.Item;
 import com.prati.projetomercado.entity.Purchase;
 import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
-import com.prati.projetomercado.exceptions.DuplicateNfceException;
-import com.prati.projetomercado.exceptions.EditNotAllowedException;
+import com.prati.projetomercado.exceptions.DuplicateEntityException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.NfceUrlParseException;
+import com.prati.projetomercado.exceptions.NotManualEntityException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
 import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
-import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
+import com.prati.projetomercado.service.NfceService;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
 import com.prati.projetomercado.utils.TokenUtils;
-import com.prati.projetomercado.utils.scraper.IScraper;
 import com.prati.projetomercado.utils.scraper.StatesRegistry;
+import com.prati.projetomercado.utils.scraper.Scraper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,7 +39,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class NfceService {
+public class NfceServiceImpl implements NfceService {
 
     private final EntityBuilderUtils builder;
     private final StatesRegistry statesRegistry;
@@ -45,11 +47,11 @@ public class NfceService {
     private final SupermarketRepository supermarketRepo;
     private final PurchaseRepository purchaseRepo;
     private final CatalogRepository catalogRepo;
-    private final JwtTokenServiceImpl jwtTokenServiceImpl;
 
+    @Override
     @Transactional(readOnly = true)
-    public NfceResponse getOne(String accessToken, String accessKey) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    public NfceResponse findByAccessKey(String accessKey) {
+        AuthUser user = getAuthenticatedUser();
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
@@ -60,9 +62,10 @@ public class NfceService {
         return NfceResponse.from(purchase);
     }
 
+    @Override
     @Transactional(readOnly = true)
-    public Page<NfceResponse> getAll(String accessToken, int page, int size) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    public Page<NfceResponse> findAllByUser(int page, int size) {
+        AuthUser user = getAuthenticatedUser();
 
         Pageable pageable = PageRequest.of(page, size);
         Page<Purchase> purchasesPage = purchaseRepo.findAllByUser(user, pageable);
@@ -70,34 +73,38 @@ public class NfceService {
         return purchasesPage.map(NfceResponse::from);
     }
 
+    @Override
     @Transactional(readOnly = true)
-    public StatesResponse getStates(String accessToken) {
-        getAuthenticatedUser(accessToken);
+    public StatesResponse getAvailableStates() {
+        getAuthenticatedUser();
         return new StatesResponse(statesRegistry.getAllImplementedStates());
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public NfceResponse registerLink(String accessToken, String url) {
+    @Override
+    @Transactional()
+    public NfceResponse createFromLink(String url) {
         String state = getStateFromUrl(url);
-        IScraper scraper = statesRegistry.getScraperByState(state);
+        Scraper scraper = statesRegistry.getScraperByState(state);
         NfceRequest nfceData = scraper.getData(url);
-        return savePurchase(nfceData, accessToken, false);
+        return savePurchase(nfceData, false);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public NfceResponse registerManual(String accessToken, NfceRequest nfceData) {
-        return savePurchase(nfceData, accessToken, true);
+    @Override
+    @Transactional()
+    public NfceResponse createManually(NfceRequest nfceData) {
+        return savePurchase(nfceData, true);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public NfceResponse edit(String accessToken, String accessKey, NfceRequest nfceData) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public NfceResponse update(String accessKey, NfceRequest nfceData) {
+        AuthUser user = getAuthenticatedUser();
 
-        Purchase purchase = purchaseRepo.findByAccessKey(nfceData.accessKey())
+        Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.isManual()) {
-            throw new EditNotAllowedException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
+            throw new NotManualEntityException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
         }
 
         if (!purchase.getUser().getId().equals(user.getId())) {
@@ -117,15 +124,16 @@ public class NfceService {
         return NfceResponse.from(purchase);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public NfceResponse patch(String accessToken, String accessKey, NfcePatchRequest patchData) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public NfceResponse partialUpdate(String accessKey, NfcePatchRequest patchData) {
+        AuthUser user = getAuthenticatedUser();
 
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
 
         if (!purchase.isManual()) {
-            throw new EditNotAllowedException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
+            throw new NotManualEntityException("Notas fiscais cadastradas pelo QR code não podem ser editadas.");
         }
 
         if (!purchase.getUser().getId().equals(user.getId())) {
@@ -146,9 +154,10 @@ public class NfceService {
         return NfceResponse.from(purchase);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void delete(String accessToken, String accessKey) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public void delete(String accessKey) {
+        AuthUser user = getAuthenticatedUser();
 
         Purchase purchase = purchaseRepo.findByAccessKey(accessKey)
                 .orElseThrow(() -> new EntityNotFoundException("Nota fiscal não encontrada."));
@@ -160,12 +169,12 @@ public class NfceService {
         purchaseRepo.delete(purchase);
     }
 
-    private NfceResponse savePurchase(NfceRequest nfceData, String accessToken, boolean isManual) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    private NfceResponse savePurchase(NfceRequest nfceData, boolean isManual) {
+        AuthUser user = getAuthenticatedUser();
 
         purchaseRepo.findByAccessKey(nfceData.accessKey())
                 .ifPresent(p -> {
-                    throw new DuplicateNfceException("Nota fiscal já existe.");
+                    throw new DuplicateEntityException("Nota fiscal já existe.");
                 });
 
         Supermarket market;
@@ -212,10 +221,10 @@ public class NfceService {
         return NfceResponse.from(purchase);
     }
 
-    private AuthUser getAuthenticatedUser(String accessToken) {
-        var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
+    private AuthUser getAuthenticatedUser() {
+        var email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepo.findByEmail(email)
-                .orElseThrow(() -> new AuthException("Usuário não encontrado."));
+                .orElseThrow(() -> new AuthException("Usuário autenticado não encontrado no banco de dados."));
     }
 
     public String getStateFromUrl(String url) {
@@ -225,7 +234,7 @@ public class NfceService {
             String host = uri.getHost();
 
             if (host == null) {
-                throw new IllegalArgumentException("Host inválido.");
+                throw new NfceUrlParseException("Host inválido.");
             }
 
             String[] parts = host.split("\\.");
@@ -234,10 +243,10 @@ public class NfceService {
                 return parts[parts.length - 3].toUpperCase();
             }
 
-            throw new IllegalArgumentException("Estado não encontrado na URL");
+            throw new NfceUrlParseException("Estado não encontrado na URL");
 
         } catch (URISyntaxException ex) {
-            throw new IllegalArgumentException("URL inválida para extrair o estado");
+            throw new NfceUrlParseException("URL inválida para extrair o estado");
         }
     }
 }

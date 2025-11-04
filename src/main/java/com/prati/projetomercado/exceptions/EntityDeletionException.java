@@ -2,8 +2,8 @@ package com.prati.projetomercado.exceptions;
 
 import org.springframework.dao.DataIntegrityViolationException;
 
-public class SupermarketDeletionException extends DataIntegrityViolationException {
-    public SupermarketDeletionException(String message) {
+public class EntityDeletionException extends DataIntegrityViolationException {
+    public EntityDeletionException(String message) {
         super(message);
     }
 }

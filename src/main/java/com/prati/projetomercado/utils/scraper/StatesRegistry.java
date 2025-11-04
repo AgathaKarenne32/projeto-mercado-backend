@@ -9,7 +9,7 @@ import java.util.Map;
 @Component
 public class StatesRegistry {
 
-    private final Map<String, IScraper> stateToScraper = new HashMap<>();
+    private final Map<String, Scraper> stateToScraper = new HashMap<>();
 
     public StatesRegistry(
             ScraperGroup1 scraperGroup1,
@@ -23,14 +23,14 @@ public class StatesRegistry {
         register(scraperGroup4, List.of("PE"));
     }
 
-    private void register(IScraper scraper, List<String> states) {
+    private void register(Scraper scraper, List<String> states) {
         for (String state : states) {
             stateToScraper.put(state, scraper);
         }
     }
 
-    public IScraper getScraperByState(String state) {
-        IScraper scraper = stateToScraper.get(state);
+    public Scraper getScraperByState(String state) {
+        Scraper scraper = stateToScraper.get(state);
         if (scraper == null) {
             throw new IllegalArgumentException("Estado " + state + " não implementado.");
         }

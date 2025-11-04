@@ -1,50 +1,60 @@
-package com.prati.projetomercado.service.supermarket;
+package com.prati.projetomercado.service.impl;
 
 import com.prati.projetomercado.dto.request.SupermarketRequest;
 import com.prati.projetomercado.dto.response.SupermarketResponse;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.Supermarket;
 import com.prati.projetomercado.exceptions.AuthException;
-import com.prati.projetomercado.exceptions.EditNotAllowedException;
+import com.prati.projetomercado.exceptions.EntityDeletionException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
-import com.prati.projetomercado.exceptions.SupermarketDeletionException;
+import com.prati.projetomercado.exceptions.NotManualEntityException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
-import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
+import com.prati.projetomercado.service.SupermarketService;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
-import com.prati.projetomercado.utils.TokenUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
-public class SupermarketService {
+public class SupermarketServiceImpl implements SupermarketService {
 
     private final EntityBuilderUtils builder;
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
     private final PurchaseRepository purchaseRepo;
-    private final JwtTokenServiceImpl jwtTokenServiceImpl;
 
+    private AuthUser getAuthenticatedUser() {
+        var email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepo.findByEmail(email)
+                .orElseThrow(() -> new AuthException("Usuário autenticado não encontrado no banco de dados."));
+    }
+
+    @Override
     @Transactional(readOnly = true)
-    public SupermarketResponse getOne(String accessToken, long id) {
+    public SupermarketResponse findById(Long id) {
+        AuthUser user = getAuthenticatedUser();
         Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
+
+        if (!supermarket.getCreatedByUser().getId().equals(user.getId())) {
+            throw new UnauthorizedAccessException("Você não tem permissão para acessar este supermercado");
+        }
+
         return SupermarketResponse.from(supermarket);
     }
 
+    @Override
     @Transactional(readOnly = true)
-    public Page<SupermarketResponse> getAll(String accessToken, int page, int size) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    public Page<SupermarketResponse> findAllByUser(int page, int size) {
+        AuthUser user = getAuthenticatedUser();
 
         Pageable pageable = PageRequest.of(page, size);
         Page<Supermarket> supermarketsPage = supermarketRepo.findAllByCreatedByUser(user, pageable);
@@ -52,24 +62,26 @@ public class SupermarketService {
         return supermarketsPage.map(SupermarketResponse::from);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public SupermarketResponse saveSupermarket(String accessToken, SupermarketRequest supermarketData) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public SupermarketResponse create(SupermarketRequest supermarketData) {
+        AuthUser user = getAuthenticatedUser();
 
         Supermarket market = supermarketRepo.save(builder.buildSupermarket(supermarketData, user, true));
 
         return SupermarketResponse.from(market);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public SupermarketResponse edit(String accessToken, long id, SupermarketRequest supermarketData) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public SupermarketResponse update(Long id, SupermarketRequest supermarketData) {
+        AuthUser user = getAuthenticatedUser();
 
         Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
 
         if (!supermarket.isManual()) {
-            throw new EditNotAllowedException("Supermercados registrados por link não podem ser editados");
+            throw new NotManualEntityException("Supermercados registrados pelo QR code não podem ser editados");
         }
 
         if (!supermarket.getCreatedByUser().getId().equals(user.getId())) {
@@ -84,15 +96,16 @@ public class SupermarketService {
         return SupermarketResponse.from(supermarket);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void delete(String accessToken, long id) {
-        AuthUser user = getAuthenticatedUser(accessToken);
+    @Override
+    @Transactional()
+    public void delete(Long id) {
+        AuthUser user = getAuthenticatedUser();
 
         Supermarket supermarket = supermarketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supermercado não encontrado."));
 
         if (!supermarket.isManual()) {
-            throw new UnauthorizedAccessException("Supermercados registrados por link não podem ser deletados");
+            throw new NotManualEntityException("Supermercados registrados pelo QR code não podem ser deletados");
         }
 
         if (!supermarket.getCreatedByUser().getId().equals(user.getId())) {
@@ -100,15 +113,9 @@ public class SupermarketService {
         }
 
         if (purchaseRepo.findBySupermarket(supermarket).isPresent()) {
-            throw new SupermarketDeletionException("Não é possível deletar este supermercado porque existem notas fiscais associadas a ele.");
+            throw new EntityDeletionException("Não é possível deletar este supermercado porque existem notas fiscais associadas a ele.");
         }
 
         supermarketRepo.delete(supermarket);
-    }
-
-    private AuthUser getAuthenticatedUser(String accessToken) {
-        var email = jwtTokenServiceImpl.getSubjectFromToken(TokenUtils.recoveryToken(accessToken));
-        return userRepo.findByEmail(email)
-                .orElseThrow(() -> new AuthException("Usuário não encontrado."));
     }
 }

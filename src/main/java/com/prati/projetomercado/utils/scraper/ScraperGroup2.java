@@ -18,7 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
-public class ScraperGroup2 implements IScraper {
+public class ScraperGroup2 implements Scraper {
     private SupermarketRequest getSupermarketRequest(String cnpjAndAddressText, String store, String cnpj) {
         String[] parts = cnpjAndAddressText.split("Inscrição Estadual: \\d+");
         String fullAddress = parts.length > 1 ? parts[1].trim() : null;
@@ -39,6 +39,7 @@ public class ScraperGroup2 implements IScraper {
         );
     }
 
+    @Override
     public NfceRequest scrape(String url) throws IOException {
         Document doc = Jsoup.connect(url).get();
         List<NfceRequest.Item> products = new ArrayList<>();

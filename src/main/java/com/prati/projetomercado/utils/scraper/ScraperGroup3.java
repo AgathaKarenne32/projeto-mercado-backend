@@ -18,7 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
-public class ScraperGroup3 implements IScraper {
+public class ScraperGroup3 implements Scraper {
 
     private final HtmlFetcher fetcher;
 

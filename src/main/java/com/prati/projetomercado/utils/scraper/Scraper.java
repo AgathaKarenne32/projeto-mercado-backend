@@ -5,7 +5,7 @@ import com.prati.projetomercado.exceptions.NfceScrapeException;
 
 import java.io.IOException;
 
-public interface IScraper {
+public interface Scraper {
     NfceRequest scrape(String url) throws Exception;
 
     default NfceRequest getData(String url) throws NfceScrapeException {

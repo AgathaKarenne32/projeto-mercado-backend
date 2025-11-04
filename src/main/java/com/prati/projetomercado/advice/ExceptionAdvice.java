@@ -3,12 +3,16 @@ package com.prati.projetomercado.advice;
 import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
-import com.prati.projetomercado.exceptions.DuplicateNfceException;
+import com.prati.projetomercado.exceptions.DuplicateEntityException;
+import com.prati.projetomercado.exceptions.EntityDeletionException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
-import com.prati.projetomercado.exceptions.SupermarketDeletionException;
+import com.prati.projetomercado.exceptions.NfceScrapeException;
+import com.prati.projetomercado.exceptions.NfceUrlParseException;
+import com.prati.projetomercado.exceptions.NotManualEntityException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -41,23 +45,36 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(UnauthorizedAccessException.class)
-    public ResponseEntity<Object> handleUnauthorizedNfceAccess(UnauthorizedAccessException ex) {
-        return ResponseEntity.status(403).body(new ErrorResponse(ex.getMessage()));
+    public ResponseEntity<ErrorResponse> handleUnauthorizedAccess(UnauthorizedAccessException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<Object> handleNfceNotFound(EntityNotFoundException ex) {
-        return ResponseEntity.status(404).body(new ErrorResponse(ex.getMessage()));
+    public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(ex.getMessage()));
     }
 
-    @ExceptionHandler(DuplicateNfceException.class)
-    public ResponseEntity<Object> handleDuplicateNfce(DuplicateNfceException ex) {
-        return ResponseEntity.status(409).body(new ErrorResponse(ex.getMessage()));
+    @ExceptionHandler({
+            DuplicateEntityException.class,
+            EntityDeletionException.class,
+            NotManualEntityException.class
+    })
+    public ResponseEntity<ErrorResponse> handleEntityConflictExceptions(RuntimeException ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage()));
     }
 
-    @ExceptionHandler(SupermarketDeletionException.class)
-    public ResponseEntity<Object> handleSupermarketDeletion(SupermarketDeletionException ex) {
-        return ResponseEntity.status(409).body(new ErrorResponse(ex.getMessage()));
+    @ExceptionHandler({
+            NfceScrapeException.class,
+            NfceUrlParseException.class
+    })
+    public ResponseEntity<ErrorResponse> handleNfceBadRequestExceptions(RuntimeException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(EmailAlreadyExistsException.class)

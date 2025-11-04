@@ -2,11 +2,11 @@ package com.prati.projetomercado.service.impl;
 
 import com.prati.projetomercado.dto.response.CatalogResponse;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
+import com.prati.projetomercado.exceptions.EntityDeletionException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
 import com.prati.projetomercado.exceptions.FieldError;
 import com.prati.projetomercado.repository.CatalogRepository;
 import com.prati.projetomercado.repository.ItemRepository;
-import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,7 +45,7 @@ public class CatalogServiceImpl implements CatalogService {
             ));
 
         if (itemRepository.findByCatalog(catalog).isPresent()) {
-            throw new RuntimeException("Não é possível deletar este item do catálogo porque existem notas fiscais associadas a ele.");
+            throw new EntityDeletionException("Não é possível deletar este item do catálogo porque existem notas fiscais associadas a ele.");
         }
 
         catalogRepository.delete(catalog);

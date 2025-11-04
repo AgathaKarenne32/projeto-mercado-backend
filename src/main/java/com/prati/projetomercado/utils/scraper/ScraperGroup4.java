@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class ScraperGroup4 implements IScraper {
+public class ScraperGroup4 implements Scraper {
     @Override
     public NfceRequest scrape(String url) throws IOException {
         Document doc = Jsoup.connect(url).get();
