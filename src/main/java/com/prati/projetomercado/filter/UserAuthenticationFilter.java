@@ -23,7 +23,7 @@ import java.util.Arrays;
 
 @Component
 @RequiredArgsConstructor
-public class UserAutenticationFilter extends OncePerRequestFilter {
+public class UserAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenServiceImpl jwtTokenService;
     private final UserDetailsServiceImpl userDetailsService;
