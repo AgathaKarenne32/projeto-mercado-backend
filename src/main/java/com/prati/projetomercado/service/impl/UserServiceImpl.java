@@ -12,7 +12,10 @@ import com.prati.projetomercado.entity.PasswordResetToken;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
+import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.ExpiredTokenException;
 import com.prati.projetomercado.exceptions.FieldError;
+import com.prati.projetomercado.exceptions.UsedTokenException;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.repository.AccessTokenRepository;
 import com.prati.projetomercado.repository.AuthUserRepository;
@@ -313,14 +316,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void verifyResetCode(String email, String code) {
         PasswordResetToken token = tokenRepository.findByUserEmailAndCode(email, code)
-                .orElseThrow(() -> new IllegalArgumentException("Código de recuperação inválido."));
+                .orElseThrow(() -> new EntityNotFoundException("Código de recuperação inválido."));
 
         if (token.isUsed()) {
-            throw new IllegalStateException("Este código já foi utilizado.");
+            throw new UsedTokenException("Este código já foi utilizado.");
         }
 
         if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("O código de recuperação expirou.");
+            throw new ExpiredTokenException("O código de recuperação expirou.");
         }
     }
 
@@ -328,14 +331,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void resetPassword(String email, String code, String newPassword) {
         PasswordResetToken token = tokenRepository.findByUserEmailAndCode(email, code)
-                .orElseThrow(() -> new IllegalArgumentException("Código de recuperação inválido."));
+                .orElseThrow(() -> new EntityNotFoundException("Código de recuperação inválido."));
 
         if (token.isUsed()) {
-            throw new IllegalStateException("Este código já foi utilizado.");
+            throw new UsedTokenException("Este código já foi utilizado.");
         }
 
         if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("O código de recuperação expirou.");
+            throw new ExpiredTokenException("O código de recuperação expirou.");
         }
 
         AuthUser user = token.getUser();
