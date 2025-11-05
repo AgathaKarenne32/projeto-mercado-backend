@@ -299,8 +299,6 @@ public class UserServiceImpl implements UserService {
                 .user(user)
                 .code(code)
                 .expiryDate(LocalDateTime.now().plusMinutes(RESET_TOKEN_EXPIRATION_MINUTES))
-                .used(false)
-                .createdAt(LocalDateTime.now())
                 .build();
         tokenRepository.save(token);
 

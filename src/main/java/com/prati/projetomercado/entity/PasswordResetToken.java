@@ -14,7 +14,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -35,6 +37,7 @@ public class PasswordResetToken {
     @Column(nullable = false)
     private LocalDateTime expiryDate;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean used = false;
 
@@ -42,5 +45,6 @@ public class PasswordResetToken {
     @JoinColumn(name = "user_id", nullable = false)
     private AuthUser user;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @CreationTimestamp
+    private Instant creationDate;
 }
