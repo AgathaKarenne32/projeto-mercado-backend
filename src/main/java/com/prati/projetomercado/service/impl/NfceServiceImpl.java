@@ -1,5 +1,6 @@
 package com.prati.projetomercado.service.impl;
 
+import com.prati.projetomercado.dto.request.NfceFilterRequest;
 import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
 import com.prati.projetomercado.dto.response.NfceResponse;
@@ -19,16 +20,17 @@ import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
 import com.prati.projetomercado.repository.PurchaseRepository;
 import com.prati.projetomercado.repository.SupermarketRepository;
+import com.prati.projetomercado.repository.spec.PurchaseSpecification;
 import com.prati.projetomercado.service.NfceService;
 import com.prati.projetomercado.utils.EntityBuilderUtils;
-import com.prati.projetomercado.utils.TokenUtils;
-import com.prati.projetomercado.utils.scraper.StatesRegistry;
 import com.prati.projetomercado.utils.scraper.Scraper;
+import com.prati.projetomercado.utils.scraper.StatesRegistry;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,6 +71,26 @@ public class NfceServiceImpl implements NfceService {
 
         Pageable pageable = PageRequest.of(page, size);
         Page<Purchase> purchasesPage = purchaseRepo.findAllByUser(user, pageable);
+
+        return purchasesPage.map(NfceResponse::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NfceResponse> search(NfceFilterRequest filter, int page, int size) {
+        AuthUser user = getAuthenticatedUser();
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Specification<Purchase> spec = Specification.allOf(
+                PurchaseSpecification.hasSupermarket(filter.supermarketId()),
+                PurchaseSpecification.hasDate(filter.date()),
+                PurchaseSpecification.hasUpdatedDate(filter.updatedDate()),
+                PurchaseSpecification.hasTotalBetween(filter.minTotal(), filter.maxTotal()),
+                (root, query, cb) -> cb.equal(root.get("user"), user)
+        );
+
+        Page<Purchase> purchasesPage = purchaseRepo.findAll(spec, pageable);
 
         return purchasesPage.map(NfceResponse::from);
     }

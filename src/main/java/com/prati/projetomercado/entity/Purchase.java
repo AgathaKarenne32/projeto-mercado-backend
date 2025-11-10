@@ -17,6 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -60,6 +61,9 @@ public class Purchase {
 
     @CreationTimestamp
     private Instant creationDate;
+
+    @UpdateTimestamp
+    private Instant updatedDate;
 
     @Column(name = "manual", nullable = false)
     private boolean manual;

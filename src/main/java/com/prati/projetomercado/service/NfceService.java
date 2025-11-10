@@ -1,5 +1,6 @@
 package com.prati.projetomercado.service;
 
+import com.prati.projetomercado.dto.request.NfceFilterRequest;
 import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
 import com.prati.projetomercado.dto.response.NfceResponse;
@@ -10,6 +11,8 @@ public interface NfceService {
     NfceResponse findByAccessKey(String accessKey);
 
     Page<NfceResponse> findAllByUser(int page, int size);
+
+    Page<NfceResponse> search(NfceFilterRequest filter, int page, int size);
 
     StatesResponse getAvailableStates();
 
