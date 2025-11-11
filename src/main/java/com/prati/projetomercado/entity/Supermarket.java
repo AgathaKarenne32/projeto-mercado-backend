@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.List;
@@ -49,7 +50,10 @@ public class Supermarket {
     private List<Catalog> catalogItems;
 
     @CreationTimestamp
-    private Instant creationDate;
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    private Instant updatedAt;
 
     @Column(name = "manual", nullable = false)
     private boolean manual;
