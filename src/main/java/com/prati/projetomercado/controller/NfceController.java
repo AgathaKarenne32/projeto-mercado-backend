@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -73,9 +74,14 @@ public class NfceController {
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal encontrada com sucesso.", data));
     }
 
+    @Operation(summary = "Lista todas as notas fiscais filtradas",
+            description = "Retorna uma lista de todas as notas fiscais filtradas do usuário autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de notas fiscais filtradas retornada com sucesso")
+    })
     @GetMapping("/search")
     public ResponseEntity<SuccessResponse<List<NfceResponse>>> searchNfces(
-            NfceFilterRequest filter,
+            @ParameterObject NfceFilterRequest filter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
