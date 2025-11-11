@@ -79,15 +79,14 @@ public class NfceServiceImpl implements NfceService {
     @Transactional(readOnly = true)
     public Page<NfceResponse> search(NfceFilterRequest filter, int page, int size) {
         AuthUser user = getAuthenticatedUser();
-
         Pageable pageable = PageRequest.of(page, size);
 
         Specification<Purchase> spec = Specification.allOf(
+                PurchaseSpecification.belongsToUser(user),
                 PurchaseSpecification.hasSupermarket(filter.supermarketId()),
                 PurchaseSpecification.hasDate(filter.date()),
                 PurchaseSpecification.hasUpdatedDate(filter.updatedDate()),
-                PurchaseSpecification.hasTotalBetween(filter.minTotal(), filter.maxTotal()),
-                (root, query, cb) -> cb.equal(root.get("user"), user)
+                PurchaseSpecification.hasTotalBetween(filter.minTotal(), filter.maxTotal())
         );
 
         Page<Purchase> purchasesPage = purchaseRepo.findAll(spec, pageable);

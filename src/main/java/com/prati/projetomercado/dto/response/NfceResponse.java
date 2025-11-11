@@ -5,6 +5,7 @@ import com.prati.projetomercado.entity.Purchase;
 import com.prati.projetomercado.entity.Supermarket;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -14,6 +15,8 @@ public record NfceResponse(
         LocalDate date,
         BigDecimal totalPrice,
         Boolean isManual,
+        Instant createdAt,
+        Instant updatedAt,
         List<NfceRequest.Item> products
 ) {
     public static NfceResponse from(Purchase purchase) {
@@ -36,6 +39,8 @@ public record NfceResponse(
                 purchase.getDate(),
                 purchase.getTotalPrice(),
                 purchase.isManual(),
+                purchase.getCreatedAt(),
+                purchase.getUpdatedAt(),
                 items
         );
     }

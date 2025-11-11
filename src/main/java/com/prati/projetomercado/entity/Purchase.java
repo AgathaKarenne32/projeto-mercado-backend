@@ -60,10 +60,10 @@ public class Purchase {
     private List<Item> items = new ArrayList<>();
 
     @CreationTimestamp
-    private Instant creationDate;
+    private Instant createdAt;
 
     @UpdateTimestamp
-    private Instant updatedDate;
+    private Instant updatedAt;
 
     @Column(name = "manual", nullable = false)
     private boolean manual;

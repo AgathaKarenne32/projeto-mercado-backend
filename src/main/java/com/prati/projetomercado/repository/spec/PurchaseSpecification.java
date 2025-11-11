@@ -1,5 +1,6 @@
 package com.prati.projetomercado.repository.spec;
 
+import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.Purchase;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -9,6 +10,11 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 
 public class PurchaseSpecification {
+
+    public static Specification<Purchase> belongsToUser(AuthUser user) {
+        return (root, query, cb) ->
+                user == null ? null : cb.equal(root.get("user"), user);
+    }
 
     public static Specification<Purchase> hasSupermarket(Long supermarketId) {
         return (root, query, cb) ->

@@ -1,11 +1,10 @@
 package com.prati.projetomercado.service;
 
 import com.prati.projetomercado.dto.request.CreateRascunhoRequest;
+import com.prati.projetomercado.dto.request.RascunhoFilterRequest;
 import com.prati.projetomercado.dto.request.UpdateRascunhoRequest;
 import com.prati.projetomercado.dto.response.RascunhoResponse;
 import org.springframework.data.domain.Page;
-
-import java.util.List;
 
 public interface RascunhoService {
 
@@ -28,6 +27,8 @@ public interface RascunhoService {
      * @return O rascunho encontrado, formatado como DTO de resposta.
      */
     RascunhoResponse buscarRascunhoPorId(Long rascunhoId);
+
+    Page<RascunhoResponse> searchRascunhos(RascunhoFilterRequest filter, int page, int size);
 
     /**
      * Atualiza um rascunho existente.

@@ -1,11 +1,25 @@
 package com.prati.projetomercado.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.time.Instant;
 
 //atualizações de lombok
 @Getter
@@ -33,14 +47,17 @@ public class Rascunho {
 
     @CreationTimestamp // Marca o campo para ser preenchido automaticamente com a data e hora de criação
     @Column(name = "created_at", updatable = false) // Nome da coluna e impede que seja atualizada
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp // Marca o campo para ser preenchido automaticamente com a data e hora da última atualização
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     // --- Relacionamento com o Usuário ---
     @ManyToOne(fetch = FetchType.LAZY) // Define um relacionamento "Muitos-para-Um": Muitos rascunhos podem pertencer a Um usuário.
     @JoinColumn(name = "user_id", nullable = false) // Define a coluna de chave estrangeira (FK) na tabela 'rascunhos'
     private AuthUser user;
+
+    @Column(name = "total_price")
+    private BigDecimal totalPrice;
 }

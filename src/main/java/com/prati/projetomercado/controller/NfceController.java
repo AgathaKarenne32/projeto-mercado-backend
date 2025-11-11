@@ -20,7 +20,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.domain.Page;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,8 +33,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -78,27 +75,10 @@ public class NfceController {
 
     @GetMapping("/search")
     public ResponseEntity<SuccessResponse<List<NfceResponse>>> searchNfces(
-            @RequestParam(required = false) Long supermarketId,
-
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate date,
-
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate updatedDate,
-
-            @RequestParam(required = false) BigDecimal minTotal,
-            @RequestParam(required = false) BigDecimal maxTotal,
-
+            NfceFilterRequest filter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-
-        NfceFilterRequest filter = new NfceFilterRequest(
-                supermarketId, date, updatedDate, minTotal, maxTotal
-        );
-
         Page<NfceResponse> data = nfceService.search(filter, page, size);
         PageResponse pageInfo = PageResponse.from(data);
 
