@@ -111,9 +111,6 @@ public class NfceController {
             @ApiResponse(responseCode = "400", description = "Requisição não pôde ser processada devido a URL inválida ou falha na extração de dados da página",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "404", description = "Supermercado não encontrado",
-                    content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponse.class))}),
             @ApiResponse(responseCode = "409", description = "Nota fiscal já existe",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))})
