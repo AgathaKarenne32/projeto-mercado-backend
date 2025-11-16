@@ -1,5 +1,6 @@
 package com.prati.projetomercado.controller;
 
+import com.prati.projetomercado.dto.request.NfceFilterRequest;
 import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
 import com.prati.projetomercado.dto.response.ErrorResponse;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -72,6 +74,25 @@ public class NfceController {
         return ResponseEntity.ok(new SuccessResponse<>("Nota fiscal encontrada com sucesso.", data));
     }
 
+    @Operation(summary = "Lista todas as notas fiscais filtradas",
+            description = "Retorna uma lista de todas as notas fiscais filtradas do usuário autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de notas fiscais filtradas retornada com sucesso")
+    })
+    @GetMapping("/search")
+    public ResponseEntity<SuccessResponse<List<NfceResponse>>> searchNfces(
+            @ParameterObject NfceFilterRequest filter,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<NfceResponse> data = nfceService.search(filter, page, size);
+        PageResponse pageInfo = PageResponse.from(data);
+
+        return ResponseEntity.ok(
+                new SuccessResponse<>("Notas fiscais filtradas com sucesso.", data.getContent(), pageInfo)
+        );
+    }
+
     @Operation(summary = "Lista todos os estados",
             description = "Retorna uma lista dos estados implementados.")
     @ApiResponses(value = {
@@ -88,9 +109,6 @@ public class NfceController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Nota fiscal criada com sucesso"),
             @ApiResponse(responseCode = "400", description = "Requisição não pôde ser processada devido a URL inválida ou falha na extração de dados da página",
-                    content = {@Content(mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "404", description = "Supermercado não encontrado",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
             @ApiResponse(responseCode = "409", description = "Nota fiscal já existe",

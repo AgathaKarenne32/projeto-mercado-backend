@@ -2,13 +2,17 @@ package com.prati.projetomercado.dto.response;
 
 import com.prati.projetomercado.entity.Supermarket;
 
+import java.time.Instant;
+
 public record SupermarketResponse(
         Long id,
         String store,
         String cnpj,
         String city,
         String state,
-        Boolean isManual
+        Boolean isManual,
+        Instant createdAt,
+        Instant updatedAt
 ) {
     public static SupermarketResponse from(Supermarket market) {
         return new SupermarketResponse(
@@ -17,7 +21,9 @@ public record SupermarketResponse(
                 market.getCnpj(),
                 market.getCity(),
                 market.getState(),
-                market.isManual()
+                market.isManual(),
+                market.getCreatedAt(),
+                market.getUpdatedAt()
         );
     }
 }

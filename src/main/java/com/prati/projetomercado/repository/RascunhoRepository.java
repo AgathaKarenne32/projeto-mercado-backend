@@ -5,13 +5,14 @@ import com.prati.projetomercado.entity.Rascunho;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository // Anotação que marca esta interface como um componente de repositório do Spring
-public interface RascunhoRepository extends JpaRepository<Rascunho, Long> {
+public interface RascunhoRepository extends JpaRepository<Rascunho, Long>, JpaSpecificationExecutor<Rascunho> {
 
     // --- MÉTODOS MÁGICOS DO SPRING DATA JPA ---
 
