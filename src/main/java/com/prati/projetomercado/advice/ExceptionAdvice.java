@@ -4,21 +4,23 @@ import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.DuplicateEntityException;
+import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
 import com.prati.projetomercado.exceptions.EntityDeletionException;
 import com.prati.projetomercado.exceptions.EntityNotFoundException;
+import com.prati.projetomercado.exceptions.ExpiredTokenException;
 import com.prati.projetomercado.exceptions.NfceScrapeException;
 import com.prati.projetomercado.exceptions.NfceUrlParseException;
 import com.prati.projetomercado.exceptions.NotManualEntityException;
 import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
+import com.prati.projetomercado.exceptions.UsedTokenException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
-import org.springframework.http.HttpStatus;
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -50,8 +52,11 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
                 .body(new ErrorResponse(ex.getMessage()));
     }
 
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex) {
+    @ExceptionHandler({
+            EntityNotFoundException.class,
+            UsernameNotFoundException.class
+    })
+    public ResponseEntity<ErrorResponse> handleEntityNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(ex.getMessage()));
     }
@@ -69,11 +74,19 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler({
             NfceScrapeException.class,
-            NfceUrlParseException.class
+            NfceUrlParseException.class,
+            UsedTokenException.class
     })
-    public ResponseEntity<ErrorResponse> handleNfceBadRequestExceptions(RuntimeException ex) {
+    public ResponseEntity<ErrorResponse> handleBadRequestExceptions(RuntimeException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ExpiredTokenException.class)
+    public ResponseEntity<ErrorResponse> handleExpiredTokenException(ExpiredTokenException ex) {
+        return ResponseEntity
+                .status(HttpStatus.GONE)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 

@@ -3,8 +3,10 @@ package com.prati.projetomercado.controller;
 
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
+import com.prati.projetomercado.dto.request.PasswordRecoveryRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
 import com.prati.projetomercado.dto.response.AuthResponse;
+import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.service.UserService;
@@ -12,6 +14,8 @@ import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.utils.TokenUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -20,7 +24,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
@@ -55,7 +65,7 @@ public class AuthController {
     })
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginUserRequest userRequest) throws Exception {
-        var authResponse= userService.login(userRequest);
+        var authResponse = userService.login(userRequest);
         return new ResponseEntity<>(authResponse, HttpStatus.OK);
     }
 
@@ -123,5 +133,82 @@ public class AuthController {
                     + "</body></html>";
             return ResponseEntity.badRequest().contentType(MediaType.TEXT_HTML).body(errorHtmlBody);
         }
+    }
+
+    @Operation(summary = "Envia código de recuperação de senha", description = "Endpoint para enviar código de recuperação de senha para o email do usuário.", requestBody =
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                            example = "{ \"email\": \"user@example.com\" }"
+                    )
+            )
+    ))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Código enviado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))})
+    })
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody PasswordRecoveryRequest request) {
+        userService.sendPasswordResetCode(request.email());
+        return ResponseEntity.ok("Código de recuperação de senha enviado com sucesso.");
+    }
+
+    @Operation(summary = "Valida o código de recuperação", description = "Verifica se o código de recuperação não expirou e não foi utilizado.", requestBody =
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                            example = "{ \"email\": \"user@example.com\", \"code\": \"123456\" }"
+                    )
+            )
+    ))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Código validado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Código já foi utilizado",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "404", description = "Código de recuperação inválido",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "410", description = "Código de recuperação expirou",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))})
+    })
+    @PostMapping("/verify-reset-code")
+    public ResponseEntity<String> verifyResetCode(@RequestBody PasswordRecoveryRequest request) {
+        userService.verifyResetCode(request.email(), request.code());
+        return ResponseEntity.ok("Código de recuperação de senha validado.");
+    }
+
+    @Operation(summary = "Cadastrar nova senha", description = "Atualiza a senha do usuário.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                            example = "{ \"email\": \"user@example.com\", \"code\": \"123456\", \"newPassword\": \"password123\" }"
+                    )
+            )
+    ))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Senha atualizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Código já foi utilizado",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "404", description = "Código de recuperação inválido",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))}),
+            @ApiResponse(responseCode = "410", description = "Código de recuperação expirou",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))})
+    })
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody PasswordRecoveryRequest request) {
+        userService.resetPassword(request.email(), request.code(), request.newPassword());
+        return ResponseEntity.ok("Senha atualizada com sucesso.");
     }
 }
