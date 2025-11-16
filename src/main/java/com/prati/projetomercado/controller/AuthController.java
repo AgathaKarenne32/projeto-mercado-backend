@@ -135,7 +135,8 @@ public class AuthController {
         }
     }
 
-    @Operation(summary = "Envia código de recuperação de senha", description = "Endpoint para enviar código de recuperação de senha para o email so usuário. Espera apenas o email", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+    @Operation(summary = "Envia código de recuperação de senha", description = "Endpoint para enviar código de recuperação de senha para o email do usuário.", requestBody =
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
             content = @Content(
                     mediaType = "application/json",
@@ -145,8 +146,8 @@ public class AuthController {
             )
     ))
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Código enviado com sucesso."),
-            @ApiResponse(responseCode = "404", description = "Usuário não encontrado.",
+            @ApiResponse(responseCode = "200", description = "Código enviado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))})
     })
@@ -156,7 +157,8 @@ public class AuthController {
         return ResponseEntity.ok("Código de recuperação de senha enviado com sucesso.");
     }
 
-    @Operation(summary = "Valida o código de recuperação", description = "Verifica se o código de recuperação não expirou e não foi usado. Epera o email e código de recuperação", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+    @Operation(summary = "Valida o código de recuperação", description = "Verifica se o código de recuperação não expirou e não foi utilizado.", requestBody =
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
             content = @Content(
                     mediaType = "application/json",
@@ -166,14 +168,14 @@ public class AuthController {
             )
     ))
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Código validado com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Código já foi utilizado.",
+            @ApiResponse(responseCode = "200", description = "Código validado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Código já foi utilizado",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "404", description = "Código de recuperação inválido.",
+            @ApiResponse(responseCode = "404", description = "Código de recuperação inválido",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "410", description = "Código de recuperação expirou.",
+            @ApiResponse(responseCode = "410", description = "Código de recuperação expirou",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))})
     })
@@ -183,7 +185,7 @@ public class AuthController {
         return ResponseEntity.ok("Código de recuperação de senha validado.");
     }
 
-    @Operation(summary = "Cadastrar nova senha", description = "Atualiza a se nha do usuário. Espera email, código de recuperação e nova senha", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+    @Operation(summary = "Cadastrar nova senha", description = "Atualiza a senha do usuário.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
             content = @Content(
                     mediaType = "application/json",
@@ -193,14 +195,14 @@ public class AuthController {
             )
     ))
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Senha atualizada com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Código já foi utilizado.",
+            @ApiResponse(responseCode = "200", description = "Senha atualizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Código já foi utilizado",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "404", description = "Código de recuperação inválido.",
+            @ApiResponse(responseCode = "404", description = "Código de recuperação inválido",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))}),
-            @ApiResponse(responseCode = "410", description = "Código de recuperação expirou.",
+            @ApiResponse(responseCode = "410", description = "Código de recuperação expirou",
                     content = {@Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class))})
     })
