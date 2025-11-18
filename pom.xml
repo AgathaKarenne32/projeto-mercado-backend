@@ -120,6 +120,18 @@
             <artifactId>playwright-stealth-4j</artifactId>
             <version>1.1.2</version>
         </dependency>
+
+        <!-- geração automatica de certificado-->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.76</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.76</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

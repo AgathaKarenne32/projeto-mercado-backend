@@ -5,7 +5,9 @@ import com.prati.projetomercado.security.oauth2.CustomOAuth2UserService;
 import com.prati.projetomercado.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.prati.projetomercado.security.oauth2.handlers.OAuth2AuthSuccessHandler;
 import com.prati.projetomercado.service.impl.UserDetailsServiceImpl;
+import com.prati.projetomercado.utils.NetworkUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -25,6 +27,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
@@ -92,10 +95,29 @@ public class SecurityConfiguration {
                 .build();
     }
 
+    @Value("${intranet.enabled}")
+    private boolean intranetEnabled;
+
+    @Value("${intranet.type}")
+    private String intranetType;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("http://127.0.0.1:5173", "http://localhost:5173"));
+
+        var allowedOrigins = new ArrayList<>(List.of("http://127.0.0.1:5173", "http://localhost:5173"));
+
+        if (intranetEnabled) {
+            var ip = NetworkUtils.getLocalIP(intranetType);
+            System.out.println(ip);
+            var frontendPort = "5173";
+            var allowedOrigin1 = "http://" + ip + ":" + frontendPort;
+            var allowedOrigin2 = "https://" + ip + ":" + frontendPort;
+            allowedOrigins.add(allowedOrigin1);
+            allowedOrigins.add(allowedOrigin2);
+
+        }
+        corsConfiguration.setAllowedOrigins(allowedOrigins);
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         corsConfiguration.setAllowedHeaders(List.of("*"));
         corsConfiguration.setAllowCredentials(true);
