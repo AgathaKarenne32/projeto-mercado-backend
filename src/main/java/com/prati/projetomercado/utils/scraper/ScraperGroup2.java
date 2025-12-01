@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -85,7 +86,8 @@ public class ScraperGroup2 implements Scraper {
             String code = matcher.group(2).trim();
             BigDecimal quantity = new BigDecimal(info.get(1).text().replaceAll("[^0-9.]", ""));
             String unit = info.get(2).text().split(":")[1].trim();
-            BigDecimal price = new BigDecimal(info.get(3).text().replaceAll("[^\\d,]", "").replace(",", "."));
+            BigDecimal lineTotalPrice = new BigDecimal(info.get(3).text().replaceAll("[^\\d,]", "").replace(",", "."));
+            BigDecimal price = lineTotalPrice.divide(quantity, 4, RoundingMode.HALF_UP);
 
             products.add(new NfceRequest.Item(name, code, quantity, unit, price));
         }
