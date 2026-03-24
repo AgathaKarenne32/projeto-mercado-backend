@@ -1,34 +1,34 @@
-# --- ESTÁGIO 1: O "CONSTRUTOR" ---
-# Usamos uma imagem completa do Java 21 (JDK) para construir nosso projeto.
-# Usamos a mesma versão do Java do seu projeto [  restartedMain] c.p.p.ProjetomercadoApplication          : Starting ProjetomercadoApplication using Java 21.0.8...].
-FROM eclipse-temurin:21-jdk-jammy AS builder
-
-# Define o diretório de trabalho dentro da "caixa"
+# --- ESTÁGIO 1: BUILD ---
+FROM maven:3.9.4-eclipse-temurin-21 AS build
 WORKDIR /app
+# Copia apenas o pom.xml primeiro para aproveitar o cache das dependências
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
-# Copia todo o código-fonte do seu projeto para dentro da "caixa"
-COPY . .
+# Copia o código e gera o jar
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-# Dá permissão de execução para o Maven Wrapper no ambiente Linux
-RUN chmod +x mvnw
+# --- ESTÁGIO 2: RUNTIME ---
+# Usamos a imagem oficial do Playwright que já vem com as dependências do sistema
+FROM mcr.microsoft.com/playwright/java:v1.40.0-jammy
 
-# Executa o comando do Maven para compilar o projeto e gerar o arquivo .jar
-# Usamos -DskipTests para pular os testes, pois eles devem ser feitos em outra etapa.
-RUN ./mvnw clean package -DskipTests
-
-
-# --- ESTÁGIO 2: O "EXECUTOR" ---
-# Agora, usamos uma imagem muito menor, que contém apenas o Java para *rodar* (JRE).
-FROM eclipse-temurin:21-jre-jammy
+# Instala o JDK 21 para rodar sua aplicação (Ubuntu base)
+RUN apt-get update && apt-get install -y openjdk-21-jdk-headless && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copia *apenas* o arquivo .jar que foi gerado no Estágio 1 (o "builder")
-# para dentro da nossa "caixa" final.
-COPY --from=builder /app/target/*.jar app.jar
+# Copia o JAR do estágio de build
+COPY --from=build /app/target/*.jar app.jar
 
-# Expõe a porta 8080, que é a porta que o seu Tomcat usa [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)].
+# COMANDO CRUCIAL: Instala os navegadores necessários dentro da imagem
+# Sem isso, o DriverException continuará ocorrendo
+RUN mvn com.microsoft.playwright:playwright-maven-plugin:1.40.0:install-browsers
+
+# Configurações de porta e ambiente
+ENV PORT=8080
+ENV SPRING_PROFILES_ACTIVE=prod
+
 EXPOSE 8080
 
-# O comando que será executado quando a "caixa" for ligada.
 ENTRYPOINT ["java", "-jar", "app.jar"]
